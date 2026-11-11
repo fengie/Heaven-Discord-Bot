@@ -18,11 +18,7 @@ jobs:
         with:
           node-version: '24.17.0'
       - name: Install dependencies without lifecycle scripts
-        run: npm install --ignore-scripts --no-audit --no-fund
-      - name: Export deterministic lock bytes for review (owned branch only)
-        if: github.event_name == 'push' && github.ref == 'refs/heads/fix/toolbox-child-runtime-contracts'
-        run: |
-          node -e "const s=require('fs').readFileSync('package-lock.json').toString('base64');for(let i=0;i<s.length;i+=2048) console.log('LOCK_CHUNK_'+String(i/2048).padStart(3,'0')+'='+s.slice(i,i+2048));"
+        run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Run unit and inherited bootstrap tests
         run: npm test
       - name: Emit source-bound child feedback for parent triage
