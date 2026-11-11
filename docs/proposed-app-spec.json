@@ -1,0 +1,25 @@
+{
+  "apiVersion": "heaven.app/v1",
+  "kind": "Application",
+  "metadata": {
+    "name": "heaven-discord-bot",
+    "displayName": "Heaven Discord Bot",
+    "description": "Nonprivileged Discord Gateway bot with private slash replies, structured logs, secure credentials and an owned Windows background runtime."
+  },
+  "targets": [
+    "server"
+  ],
+  "capabilities": [
+    "core.logging",
+    "network.http",
+    "runtime.background-jobs",
+    "release.autoupdate"
+  ],
+  "quality": {
+    "accessibility": false,
+    "offline": false,
+    "visualRegression": false,
+    "performanceBudget": true,
+    "security": true
+  }
+}

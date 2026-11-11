@@ -16,6 +16,8 @@ fi
 command -v powershell.exe >/dev/null 2>&1 || fail WINDOWS_HOST_IDENTITY_UNAVAILABLE
 native_host="$(powershell.exe -NoLogo -NoProfile -NonInteractive -Command '[Environment]::MachineName' 2>/dev/null | tr -d '\r\n' | tr '[:lower:]' '[:upper:]')" || fail WINDOWS_HOST_IDENTITY_UNAVAILABLE
 [[ "$native_host" == "HEAVEN" ]] || fail HEAVEN1_REQUIRED
+# Release HOLD: legacy WSL setup must not bypass required Toolbox adoption.
+fail TOOLBOX_INHERITANCE_NOT_VERIFIED
 [[ "$(id -u)" != 0 ]] || fail UNPRIVILEGED_WSL_USER_REQUIRED
 
 repo="$(cd "$(dirname "$0")/.." && pwd -P)"

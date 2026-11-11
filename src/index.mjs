@@ -1,5 +1,6 @@
 import { Client, Events, GatewayIntentBits, MessageFlags } from 'discord.js';
 import { getBotToken } from './config.mjs';
+import { inspectReleaseInheritance } from './release-inheritance.mjs';
 import { replyForCommand } from './commands.mjs';
 
 // Slash commands need only Guilds: no privileged message-content or member intent.
@@ -51,6 +52,12 @@ process.once('SIGINT', shutdown);
 process.once('SIGTERM', shutdown);
 
 async function start() {
+  const admission = await inspectReleaseInheritance();
+  if (!admission.ready) {
+    console.error('TOOLBOX_INHERITANCE_NOT_VERIFIED');
+    process.exitCode = 1;
+    return;
+  }
   let token;
   try {
     token = getBotToken();
