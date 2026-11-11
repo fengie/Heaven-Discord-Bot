@@ -137,7 +137,7 @@ try {
     $stage = [string]$result.stage
     if (-not $stage.StartsWith((Join-Path $root '.stage-'),[StringComparison]::OrdinalIgnoreCase)) { Fail 'STAGE_IDENTITY_UNVERIFIED' }
     $env:PATH = "$(Split-Path $node -Parent);$env:PATH"
-    & $node $npm install --prefix $stage --ignore-scripts --omit=dev --no-audit --no-fund --loglevel=error | Out-Null
+    & $node $npm ci --prefix $stage --ignore-scripts --omit=dev --no-audit --no-fund --loglevel=error | Out-Null
     if ($LASTEXITCODE -ne 0) { Fail 'STAGED_DEPENDENCIES_FAILED' }
     Push-Location $stage
     try { & $node --test | Out-Null; if ($LASTEXITCODE -ne 0) { Fail 'STAGED_TESTS_FAILED' } }
