@@ -1,0 +1,21 @@
+name: Toolbox Child Bootstrap Contract
+on:
+  pull_request:
+    paths:
+      - 'AGENTS.md'
+      - '.heaven/**'
+      - 'test/bootstrap-contract.test.mjs'
+      - '.github/workflows/bootstrap-contract.yml'
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Verify source-side child contract
+        run: node --test test/bootstrap-contract.test.mjs

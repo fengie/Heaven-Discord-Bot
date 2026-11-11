@@ -1,0 +1,25 @@
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import test from 'node:test';
+const load = async name => JSON.parse(await readFile(new URL(name, import.meta.url), 'utf8'));
+const root = new URL('../', import.meta.url);
+test('pinned Toolbox child contract and impact subscription are internally consistent', async () => {
+  const entry = await load('../.heaven/agent-entry.json');
+  const subscription = await load('../.heaven/toolbox-subscriptions.json');
+  const agents = await readFile(new URL('AGENTS.md', root), 'utf8');
+  assert.equal(entry.schema, 'heaven-toolbox/child-agent-entry/v1');
+  assert.equal(entry.toolbox.repository, 'fengie/heaven-toolbox');
+  assert.match(entry.toolbox.revision, /^[a-f0-9]{40}$/);
+  assert.equal(subscription.schema, 'heaven-toolbox/child-subscription/v1');
+  assert.equal(subscription.repository, 'fengie/Heaven-Discord-Bot');
+  assert.equal(subscription.toolboxRevision, entry.toolbox.revision);
+  assert.deepEqual(subscription.capabilities, []);
+  assert.match(agents, /Assigned task packet/);
+  assert.ok(agents.includes(entry.toolbox.revision));
+  assert.equal(entry.taskPacket.assignedByGenerator, false);
+  assert.equal(entry.taskPacket.missingAction, 'HOLD_UNASSIGNED');
+  assert.equal(entry.feedback.automaticParentWrite, false);
+  assert.equal(entry.feedback.automaticChildUpdate, false);
+  assert.equal(entry.toolAccess.ambientCredentialsInherited, false);
+  assert.equal(entry.toolAccess.hostRightsInherited, false);
+});

@@ -1,0 +1,47 @@
+{
+  "schema": "heaven-toolbox/child-agent-entry/v1",
+  "taskPacket": {
+    "requiredBeforeWork": true,
+    "authority": "current controller- or owner-assigned task packet",
+    "taskEntryRoute": "/api/tasks/{taskId}/entry",
+    "agentInboxRoute": "/api/agents/{agentId}/inbox",
+    "taskIdSource": "controller-selected assignment packet",
+    "agentIdSource": "authenticated current agent session/controller identity",
+    "unassignedRoute": "existing controller assignment/entry flow via approved tools",
+    "missingAction": "HOLD_UNASSIGNED",
+    "assignedByGenerator": false
+  },
+  "toolbox": {
+    "repository": "fengie/heaven-toolbox",
+    "revision": "99312862f27cb9bba848cebc44317fd41b6651aa",
+    "skillCatalogPath": "tools/lesson-enforcement/manifest.json",
+    "skillRootPath": "plugins/heaven-toolbox/chatgpt-package/skills",
+    "lessonCatalogPath": "_AGENT_TRAINING/PROJECT_LESSON_CATALOG.md",
+    "policyPaths": [
+      "AGENTS.md",
+      "_AGENT_TRAINING/AGENT_OPERATING_STANDARD.md",
+      "GLOBAL_GIT_DIRECTIVE.md",
+      "docs/agent-role-entry-tree.md"
+    ]
+  },
+  "feedback": {
+    "schema": "heaven-toolbox/child-feedback/v1",
+    "triggers": [
+      "task-closeout",
+      "incident",
+      "research-closure",
+      "verified-reuse"
+    ],
+    "parentRepository": "fengie/heaven-toolbox",
+    "reviewIssue": 270,
+    "automaticParentWrite": false,
+    "automaticChildUpdate": false,
+    "independentlyVerifiedByChild": false
+  },
+  "toolAccess": {
+    "source": "verified current-session inventory intersected with the assigned packet and approved role",
+    "catalogGrantsAccess": false,
+    "ambientCredentialsInherited": false,
+    "hostRightsInherited": false
+  }
+}
