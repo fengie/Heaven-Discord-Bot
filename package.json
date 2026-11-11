@@ -1,0 +1,19 @@
+{
+  "name": "heaven-discord-bot",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Minimal Discord slash-command bot for Heaven",
+  "engines": {
+    "node": ">=24.17.0"
+  },
+  "scripts": {
+    "start": "node src/index.mjs",
+    "register": "node scripts/register-commands.mjs",
+    "test": "node --test",
+    "check": "node --check src/index.mjs && node --check src/config.mjs && node --check src/commands.mjs && node --check scripts/register-commands.mjs"
+  },
+  "dependencies": {
+    "discord.js": "14.28.1"
+  }
+}
