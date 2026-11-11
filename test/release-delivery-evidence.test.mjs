@@ -30,7 +30,7 @@ test('release report distinguishes held source, parent quality and unverified ph
   assert.equal(acceptance.h1_runtime.state, 'UNVERIFIED');
   assert.equal(acceptance.discord_commands.state, 'UNVERIFIED');
   assert.equal(acceptance.update_rollback.state, 'UNVERIFIED');
-  assert.equal(acceptance.overall, 'NOT_DEPLOYED');
+  assert.equal(acceptance.overall, 'UNVERIFIED');
   assert.doesNotMatch(result.stdout, /DISCORD_TOKEN|credentials\.dpapi\.json/);
 });
 
