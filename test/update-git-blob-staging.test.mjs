@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -28,7 +28,7 @@ test('H1 update stages immutable Git blobs, not Windows CRLF-converted working b
     await writeFile(join(source, 'src', 'index.mjs'), "export const message = 'ready';\n");
     git(source, ['add', '--all']);
     git(source, ['commit', '-m', 'immutable source fixture']);
-    git(source, ['checkout-index', '--force', '--all']);
+    await writeFile(join(source, 'src', 'index.mjs'), "export const message = 'ready';\r\n");
 
     assert.equal(git(source, ['status', '--porcelain', '--untracked-files=normal']), '');
     const revision = git(source, ['rev-parse', 'HEAD']);
@@ -72,7 +72,7 @@ test('refuses symlink-valued tracked objects instead of executing a linked targe
     assert.throws(() => execFileSync(process.execPath, [cli, 'stage', root, source, revision], {
       encoding: 'utf8', timeout: 30000, stdio: ['ignore', 'pipe', 'pipe'],
     }), /Command failed/);
-    assert.equal((await import('node:fs/promises')).readdir(root).then(x => x.length), undefined);
+    assert.deepEqual(await readdir(root), []);
   } finally {
     await rm(parent, { recursive: true, force: true });
   }
