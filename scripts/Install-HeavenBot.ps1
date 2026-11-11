@@ -12,6 +12,8 @@ function Deny([string]$Code) { throw $Code }
 
 # Fail before network, secret access, task changes, or filesystem writes.
 if ([Environment]::MachineName.ToUpperInvariant() -cne 'HEAVEN') { Deny 'HEAVEN1_REQUIRED' }
+# Release HOLD: no files, credentials, tasks, downloads or startup on HEAVEN.
+Deny 'TOOLBOX_INHERITANCE_NOT_VERIFIED'
 if (-not [Environment]::Is64BitProcess) { Deny 'WINDOWS_X64_REQUIRED' }
 if ([string]::IsNullOrWhiteSpace($env:LOCALAPPDATA)) { Deny 'LOCAL_APPDATA_UNAVAILABLE' }
 
