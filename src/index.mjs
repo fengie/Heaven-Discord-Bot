@@ -7,7 +7,7 @@ import { replyForCommand } from './commands.mjs';
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
 client.once(Events.ClientReady, ready => {
-  console.info(JSON.stringify({ event: 'discord.ready', userId: ready.user.id }));
+  console.info(JSON.stringify({ event: 'discord.ready', userId: ready.user.id, sourceSha: process.env.HEAVEN_BOT_SOURCE_SHA ?? null, pid: process.pid, observedAt: new Date().toISOString() }));
 });
 
 client.on(Events.InteractionCreate, async interaction => {
