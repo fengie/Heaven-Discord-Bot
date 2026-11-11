@@ -30,7 +30,7 @@ jobs:
         with:
           node-version: '24.17.0'
       - name: Install dependencies without credential exposure
-        run: npm install --ignore-scripts --no-audit --no-fund
+        run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Register slash commands in Discord
         run: node scripts/register-commands.mjs
         env:
