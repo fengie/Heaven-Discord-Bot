@@ -73,7 +73,7 @@ if ($Mode -eq 'Run') {
 $user = [Security.Principal.WindowsIdentity]::GetCurrent()
 $sid = $user.User.Value
 $userName = $user.Name
-$mutex = New-Object Threading.Mutex($false, ('Local\HeavenDiscordBotInstall_' + $sid.Replace('-', '_')))
+$mutex = [Threading.Mutex]::new($false, ('Local\HeavenDiscordBotInstall_' + $sid.Replace('-', '_')))
 $locked = $false
 $stage = $null
 try {
@@ -160,7 +160,7 @@ try {
       guildId = $guildId
     } | ConvertTo-Json -Compress
     $pending = Join-Path $stage 'credentials.pending'
-    [IO.File]::WriteAllText($pending, $configuration, (New-Object Text.UTF8Encoding($false)))
+    [IO.File]::WriteAllText($pending, $configuration, ([Text.UTF8Encoding]::new($false)))
     [IO.File]::Move($pending, $credentials)
     $aclResult = & icacls.exe $credentials /inheritance:r /grant:r ('*' + $sid + ':(R)') '*S-1-5-18:(F)' '*S-1-5-32-544:(F)' 2>&1
     if ($LASTEXITCODE -ne 0) { Deny 'CREDENTIAL_ACL_UNVERIFIED' }
