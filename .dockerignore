@@ -1,0 +1,11 @@
+.git
+.github
+.heaven
+node_modules
+test
+docs
+.env
+.env.*
+*.log
+coverage
+dist
