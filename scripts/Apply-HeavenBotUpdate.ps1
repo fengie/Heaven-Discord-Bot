@@ -61,13 +61,21 @@ function Await-TaskState([string]$State,[int]$Seconds) {
     }
     Fail 'BOT_TASK_STATE_UNCONFIRMED'
 }
-function Await-Gateway([int]$Seconds) {
+function Await-Gateway([int]$Seconds,[string]$ExpectedRevision) {
     for($i=0;$i -lt $Seconds;$i+=2) {
         Start-Sleep -Seconds 2
         $state = [string](Get-ScheduledTask -TaskName $taskName).State
         if ($state -eq 'Running' -and (Test-Path -LiteralPath $log -PathType Leaf)) {
-            if (Select-String -LiteralPath $log -Pattern '"event":"discord.ready"' -SimpleMatch -Quiet -ErrorAction SilentlyContinue) {
-                return $true
+            foreach ($line in @(Get-Content -LiteralPath $log -Tail 20 -ErrorAction SilentlyContinue)) {
+                try {
+                    $event = [string]$line | ConvertFrom-Json -ErrorAction Stop
+                    if ([string]$event.event -cne 'discord.ready' -or
+                        [string]$event.sourceSha -cne $ExpectedRevision -or
+                        [int]$event.pid -le 0) { continue }
+                    $when = [DateTimeOffset]::Parse([string]$event.observedAt)
+                    if ($when -le [DateTimeOffset]::UtcNow -and
+                        $when -ge [DateTimeOffset]::UtcNow.AddMinutes(-2)) { return $true }
+                } catch { }
             }
         }
     }
@@ -148,7 +156,7 @@ try {
     $switched = $true
     [void](NodeCli @('activate',$root,$stage,$revision))
     BotOwnedTaskStart
-    if (-not (Await-Gateway -Seconds 60)) { Fail 'CANDIDATE_GATEWAY_UNVERIFIED' }
+    if (-not (Await-Gateway -Seconds 60 -ExpectedRevision $revision)) { Fail 'CANDIDATE_GATEWAY_UNVERIFIED' }
     [void](NodeCli @('confirm',$root,$revision))
     if ([string](NodeCli @('current',$root)).revision -cne $revision) { Fail 'DEPLOYMENT_SOURCE_MISMATCH' }
     [pscustomobject]@{schema='heaven-discord-bot/update-adapter/v1';status='DEPLOYED';host='HEAVEN';installed_sha=$revision;source_sha=$revision;previous_sha=$old;gateway_ready=$true} | ConvertTo-Json -Compress
@@ -161,7 +169,7 @@ try {
             BotOwnedTaskStop
             [void](NodeCli @('recover',$root))
             BotOwnedTaskStart
-            if (-not (Await-Gateway -Seconds 60)) { Fail 'ROLLBACK_GATEWAY_UNVERIFIED' }
+            if (-not (Await-Gateway -Seconds 60 -ExpectedRevision $old)) { Fail 'ROLLBACK_GATEWAY_UNVERIFIED' }
             Write-Output 'BOT_UPDATE_ROLLED_BACK'
         } catch { Write-Output 'BOT_UPDATE_ROLLBACK_UNVERIFIED' }
     }
