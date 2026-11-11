@@ -1,5 +1,7 @@
 # Heaven Discord Bot
 
+**DO NOT RUN ANY INSTALLER — INHERITANCE_NOT_VERIFIED.** The application does not yet meet the mandatory Heaven Toolbox update, quality, lesson and capability adoption contracts. Both current installers and bot startup are intentionally release-held. Previously shared immutable installer URLs still execute their old versions and must not be used. See [Toolbox inheritance acceptance](docs/toolbox-inheritance-acceptance.md).
+
 Minimal Discord slash-command bot owned by `fengie`. Product-specific bot code lives here; shared engineering infrastructure remains in the private [Heaven Toolbox](https://github.com/fengie/heaven-toolbox) repository.
 
 ## Initial command set
