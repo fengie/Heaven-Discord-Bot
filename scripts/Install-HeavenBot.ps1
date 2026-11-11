@@ -141,7 +141,7 @@ try {
 
   Write-Output 'HEAVEN: installing bot dependencies...'
   $env:PATH = "$runtime;$env:PATH"
-  & $node $npm install --prefix $app --omit=dev --ignore-scripts --no-audit --no-fund --loglevel=error | Out-Null
+  & $node $npm ci --prefix $app --omit=dev --ignore-scripts --no-audit --no-fund --loglevel=error | Out-Null
   if ($LASTEXITCODE -ne 0) { Deny 'NPM_INSTALL_FAILED' }
 
   if (-not (Test-Path -LiteralPath $credentials)) {
