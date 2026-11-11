@@ -23,5 +23,17 @@ jobs:
         run: npm test
       - name: Check source syntax
         run: npm run check
+      - name: Check H1 installer syntax and fail-closed non-WSL guard
+        shell: bash
+        run: |
+          bash -n scripts/bootstrap-heaven1.sh
+          set +e
+          output="$(bash scripts/bootstrap-heaven1.sh 2>&1)"
+          status=$?
+          set -e
+          if [[ "$status" -eq 0 || "$output" != *HEAVEN1_WSL_REQUIRED* ]]; then
+            echo "Installer guard failed to refuse a non-H1 Linux host"
+            exit 1
+          fi
       - name: Build H1 container definition (no credentials)
         run: docker build --tag heaven-discord-bot:ci .
