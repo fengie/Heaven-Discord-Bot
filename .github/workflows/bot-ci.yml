@@ -47,6 +47,20 @@ jobs:
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
+      - name: Set up Node for native update transaction tests
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24.17.0'
+      - name: Verify Windows-native release transactions
+        run: node --test test/update-lifecycle.test.mjs
+      - name: Verify H1 updater source parses on Windows PowerShell 5.1
+        shell: powershell
+        run: |
+          $path = Join-Path $env:GITHUB_WORKSPACE 'scripts\Apply-HeavenBotUpdate.ps1'
+          $tokens = $null
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile($path, [ref]$tokens, [ref]$errors) | Out-Null
+          if ($errors.Count -gt 0) { throw 'H1_UPDATER_POWERSHELL_PARSE_FAILED' }
       - name: Verify Windows PowerShell 5.1 parse and safe off-host refusal
         shell: powershell
         run: |
