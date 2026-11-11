@@ -64,3 +64,5 @@ jobs:
           if ($exitCode -eq 0 -or ([string]($output -join ' ')) -notmatch 'HEAVEN1_REQUIRED') {
             throw 'WINDOWS_BOOTSTRAP_HOST_DENIAL_FAILED'
           }
+          # The tested child exited 1 intentionally; do not propagate its code.
+          exit 0
