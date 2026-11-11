@@ -31,6 +31,6 @@ jobs:
           $a = Get-Content '.heaven/app-update-policy.json' -Raw | ConvertFrom-Json
           if ($a.apiVersion -cne 'heaven.update/v1' -or $a.mode -cne 'required' -or -not $a.transaction.rollbackRequired -or -not $a.integrity.artifactDigest) { throw 'TOOLBOX_PRODUCT_UPDATER_CONTRACT_INVALID' }
       - name: Install test dependencies
-        run: npm install --ignore-scripts --no-audit --no-fund
+        run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Verify updater and inherited product tests
         run: npm test
