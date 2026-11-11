@@ -41,10 +41,17 @@ test('bot App Spec selects actual server-only capabilities', async () => {
   assert.equal(spec.apiVersion, 'heaven.app/v1');
   assert.deepEqual(spec.targets, ['server']);
   assert.equal(spec.metadata.name, 'heaven-discord-bot');
-  assert.ok(spec.capabilities.includes('release.autoupdate'));
-  assert.ok(spec.capabilities.includes('runtime.background-jobs'));
-  assert.ok(spec.capabilities.includes('core.logging'));
-  assert.ok(spec.capabilities.includes('network.http'));
+  assert.equal(spec.metadata.applicationId, 'app.heaven.generated.heavendiscordbot');
+  assert.deepEqual(spec.experience, {pages:[]});
+  assert.deepEqual(spec.capabilities, [
+    {id:'core.logging',config:{}},
+    {id:'network.http',config:{}},
+    {id:'runtime.background-jobs',config:{}},
+    {id:'release.autoupdate',config:{}},
+  ]);
+  assert.deepEqual(Object.keys(spec), [
+    'apiVersion','kind','metadata','targets','capabilities','experience','quality',
+  ]);
 });
 
 test('dependency graph is locked and consumed by every runtime package installer', async () => {
