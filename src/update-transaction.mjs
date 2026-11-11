@@ -32,7 +32,7 @@ function relativeFile(value) {
   }
   return value;
 }
-async function stageBytes(source, target, relativePath) {
+async function stageBytes(source, target, relativePath, sourceBlobs) {
   const relative = relativeFile(relativePath);
   const parts = relative.split('/');
   let s = source, t = target;
@@ -45,13 +45,31 @@ async function stageBytes(source, target, relativePath) {
   }
   const input = join(s, parts.at(-1));
   const output = join(t, parts.at(-1));
-  const stat = await plainFile(input);
-  if (stat.size > MAX_FILE_BYTES) fail('SOURCE_FILE_TOO_LARGE');
-  const bytes = await readFile(input);
-  if (bytes.length !== stat.size) fail('SOURCE_CHANGED_DURING_COPY');
-  const before = digest(bytes);
-  await writeFile(output, bytes, {flag:'wx',mode:0o600});
-  if (digest(await readFile(output)) !== before || digest(await readFile(input)) !== before) {
+  let bytes;
+  if (sourceBlobs !== undefined) {
+    const blob = sourceBlobs.get(relative);
+    if (!blob || !Buffer.isBuffer(blob.bytes) || !SHA.test(blob.oid ?? '')) {
+      fail('INVALID_GIT_BLOB');
+    }
+    bytes = Buffer.from(blob.bytes);
+    if (bytes.length > MAX_FILE_BYTES) fail('SOURCE_FILE_TOO_LARGE');
+    // Git object identity includes its byte length and "blob <length>\0" header.
+    // This prevents line-ending/filter changes in a clean checkout from being
+    // mislabeled as the trusted commit's installed bytes.
+    const observed = createHash('sha1')
+      .update(Buffer.from('blob ' + bytes.length + '\0'))
+      .update(bytes).digest('hex');
+    if (observed !== blob.oid) fail('GIT_BLOB_DIGEST_MISMATCH');
+  } else {
+    const stat = await plainFile(input);
+    if (stat.size > MAX_FILE_BYTES) fail('SOURCE_FILE_TOO_LARGE');
+    bytes = await readFile(input);
+    if (bytes.length !== stat.size) fail('SOURCE_CHANGED_DURING_COPY');
+  }
+  const expected = digest(bytes);
+  await writeFile(output, bytes, { flag: 'wx', mode: 0o600 });
+  if (digest(await readFile(output)) !== expected ||
+      (sourceBlobs === undefined && digest(await readFile(input)) !== expected)) {
     fail('STAGED_FILE_MISMATCH');
   }
   return bytes.length;
@@ -65,20 +83,24 @@ export async function readInstalledRevision(root) {
   return normalizedSha(sha);
 }
 
-export async function stageCandidate({root,source,revision,files}) {
+export async function stageCandidate({root,source,revision,files,sourceBlobs}) {
   const next = normalizedSha(revision);
   await plainDirectory(root);
   await plainDirectory(source);
   if (!Array.isArray(files) || files.length === 0 || files.length > MAX_FILES) fail('INVALID_FILE_MANIFEST');
   if (new Set(files).size !== files.length) fail('DUPLICATE_SOURCE_FILE');
   for (const entry of files) relativeFile(entry);
+  if (sourceBlobs !== undefined && (!(sourceBlobs instanceof Map) ||
+      sourceBlobs.size !== files.length || [...sourceBlobs.keys()].some(path => !files.includes(path)))) {
+    fail('INVALID_GIT_BLOBS');
+  }
   const stage = join(root,'.stage-'+next);
   if (await exists(stage)) fail('STAGE_OCCUPIED');
   await mkdir(stage,{mode:0o700});
   let total = 0;
   try {
     for (const file of files) {
-      total += await stageBytes(source, stage, file);
+      total += await stageBytes(source, stage, file, sourceBlobs);
       if (total > MAX_TOTAL_BYTES) fail('SOURCE_TOTAL_TOO_LARGE');
     }
     return {stage,revision:next,digestFiles:files.length,totalBytes:total};
