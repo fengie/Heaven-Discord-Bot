@@ -19,8 +19,29 @@ try {
     if (!['https://github.com/fengie/Heaven-Discord-Bot.git','https://github.com/fengie/Heaven-Discord-Bot','git@github.com:fengie/Heaven-Discord-Bot.git'].includes(origin)) {
       fail('UPDATE_SOURCE_ORIGIN_INVALID');
     }
-    const files = execFileSync('git',['-C',arg1,'ls-files','-z'],{encoding:'utf8',timeout:15000,maxBuffer:1024*1024}).split('\0').filter(Boolean).filter(file => !['.env.example','.gitignore'].includes(file));
-    result = await stageCandidate({root,source:arg1,revision:arg2,files});
+    // Use the reviewed commit tree, never transformed checkout files. Git can
+    // report a clean Windows worktree whose CRLF bytes differ from HEAD.
+    // ls-tree also exposes symlink mode (120000), which must be rejected.
+    const tree = execFileSync('git',['-C',arg1,'ls-tree','-r','-z','HEAD'],{
+      timeout:15000,maxBuffer:1024*1024,
+    }).toString('utf8');
+    const sourceBlobs = new Map();
+    for (const row of tree.split('\0').filter(Boolean)) {
+      const match = /^(100644|100755|120000) blob ([a-f0-9]{40})\t([^\0]+)$/.exec(row);
+      if (!match || match[1] === '120000') fail('UNSAFE_GIT_TREE_OBJECT');
+      const [, mode, objectId, path] = match;
+      if (['.env.example','.gitignore'].includes(path)) continue;
+      if (sourceBlobs.has(path)) fail('DUPLICATE_GIT_PATH');
+      // cat-file returns the exact committed byte stream, bypassing smudge and
+      // checkout EOL filters. StageCandidate verifies each Git object SHA.
+      const bytes = execFileSync('git',['-C',arg1,'cat-file','blob',objectId],{
+        timeout:15000,maxBuffer:2*1024*1024+4096,
+      });
+      sourceBlobs.set(path,{oid:objectId,bytes});
+    }
+    result = await stageCandidate({
+      root, source:arg1, revision:arg2, files:[...sourceBlobs.keys()], sourceBlobs,
+    });
   } else if (mode === 'activate') {
     result = await activateStaged({root,stage:arg1,revision:arg2,previousRevision:await readInstalledRevision(root)});
   } else if (mode === 'confirm') {
@@ -40,7 +61,8 @@ try {
     'SOURCE_CHANGED_DURING_COPY','STAGED_FILE_MISMATCH','INVALID_JOURNAL','ROLLBACK_UNVERIFIED',
     'UPDATE_PENDING_RECOVERY','INSTALLED_SOURCE_MOVED','PREVIOUS_RELEASE_OCCUPIED',
     'POST_PROMOTION_MISMATCH','INVALID_SHA','DUPLICATE_SOURCE_FILE','UPDATE_JOURNAL_NOT_FOUND',
-    'INSTALLED_REVISION_UNVERIFIED','SAME_REVISION','UNSAFE_STAGE_IDENTITY'
+    'INSTALLED_REVISION_UNVERIFIED','SAME_REVISION','UNSAFE_STAGE_IDENTITY',
+    'UNSAFE_GIT_TREE_OBJECT','DUPLICATE_GIT_PATH','INVALID_GIT_BLOB','INVALID_GIT_BLOBS','GIT_BLOB_DIGEST_MISMATCH'
   ]);
   const code = safe.has(error?.message) ? error.message : 'UPDATE_OPERATION_FAILED';
   console.error(code);
