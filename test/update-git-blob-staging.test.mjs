@@ -22,6 +22,7 @@ test('H1 update stages immutable Git blobs, not Windows CRLF-converted working b
     git(source, ['init', '-b', 'main']);
     git(source, ['config', 'user.email', 'test@example.invalid']);
     git(source, ['config', 'user.name', 'CI Fixture']);
+    git(source, ['config', 'core.autocrlf', 'true']);
     git(source, ['remote', 'add', 'origin', 'https://github.com/fengie/Heaven-Discord-Bot.git']);
     await writeFile(join(source, '.gitattributes'), '*.mjs text eol=crlf\n');
     await writeFile(join(source, 'package.json'), '{"private":true}\n');
