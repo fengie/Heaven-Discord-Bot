@@ -1,0 +1,43 @@
+{
+  "schema": "heaven-toolbox/child-component-adoption/v1",
+  "repository": "fengie/Heaven-Discord-Bot",
+  "toolboxRevision": "99312862f27cb9bba848cebc44317fd41b6651aa",
+  "sourceMode": "public-child-equivalent-reviewed-source",
+  "privateParentSourceCopied": false,
+  "components": [
+    {
+      "id": "core.logging",
+      "consumer": "src/index.mjs",
+      "regressions": [
+        "test/commands.test.mjs"
+      ],
+      "evidenceState": "SOURCE_TESTED"
+    },
+    {
+      "id": "network.http",
+      "consumer": "scripts/register-commands.mjs",
+      "regressions": [
+        "test/config.test.mjs"
+      ],
+      "evidenceState": "SOURCE_TESTED"
+    },
+    {
+      "id": "runtime.background-jobs",
+      "consumer": "scripts/Install-HeavenBot.ps1",
+      "regressions": [
+        "test/windows-bootstrap-contract.test.mjs"
+      ],
+      "evidenceState": "SOURCE_TESTED"
+    },
+    {
+      "id": "release.autoupdate",
+      "consumer": "scripts/Apply-HeavenBotUpdate.ps1",
+      "regressions": [
+        "test/update-lifecycle.test.mjs",
+        "test/toolbox-update-contract.test.mjs"
+      ],
+      "evidenceState": "SOURCE_TESTED"
+    }
+  ],
+  "notes": "These are locally implemented equivalents bound to regression sources, not copies of private Toolbox modules or proof of installed H1 behavior."
+}

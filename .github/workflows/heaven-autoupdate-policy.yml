@@ -1,0 +1,36 @@
+name: Heaven AutoUpdate Contract
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  enforce:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out exact source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Setup Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24.17.0'
+      - name: Validate independent child update and lifecycle policy
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $p = Get-Content '.heaven/update-policy.json' -Raw | ConvertFrom-Json
+          if ($p.schema -cne 'heaven-toolbox/update-policy/v1' -or $p.repository -cne 'fengie/Heaven-Discord-Bot' -or $p.branch -cne 'main' -or $p.kind -cne 'product') { throw 'TOOLBOX_REPO_UPDATE_CONTRACT_INVALID' }
+          if (-not $p.source_update.required -or $p.source_update.strategy -cne 'ff-only') { throw 'TOOLBOX_SOURCE_UPDATE_CONTRACT_INVALID' }
+          if ($p.runtime_update.mode -cne 'apply-script' -or $p.runtime_update.apply_script -cne 'scripts/Apply-HeavenBotUpdate.ps1' -or -not (Test-Path -LiteralPath $p.runtime_update.apply_script -PathType Leaf)) { throw 'TOOLBOX_RUNTIME_UPDATER_MISSING' }
+          $a = Get-Content '.heaven/app-update-policy.json' -Raw | ConvertFrom-Json
+          if ($a.apiVersion -cne 'heaven.update/v1' -or $a.mode -cne 'required' -or -not $a.transaction.rollbackRequired -or -not $a.integrity.artifactDigest) { throw 'TOOLBOX_PRODUCT_UPDATER_CONTRACT_INVALID' }
+      - name: Install test dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Verify updater and inherited product tests
+        run: npm test

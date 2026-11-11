@@ -5,18 +5,12 @@ import test from 'node:test';
 const root = new URL('../', import.meta.url);
 const source = path => readFile(new URL(path, root), 'utf8');
 
-test('release inheritance reports missing real update, quality, lesson and feedback evidence', async () => {
+test('release inheritance keeps App Platform generator quality held after local child source coverage', async () => {
   const { inspectReleaseInheritance } = await import('../src/release-inheritance.mjs');
   const report = await inspectReleaseInheritance(root);
   assert.equal(report.ready, false);
   assert.equal(report.schema, 'heaven-discord-bot/release-inheritance-check/v1');
-  assert.deepEqual(report.blockers, [
-    'APP_PLATFORM_QUALITY_UNVERIFIED',
-    'AUTOMATIC_RUNTIME_UPDATE_MISSING',
-    'LESSON_ADOPTION_UNVERIFIED',
-    'REPOSITORY_UPDATE_POLICY_MISSING',
-    'TOOLBOX_CAPABILITIES_UNADOPTED',
-  ]);
+  assert.deepEqual(report.blockers, ['APP_PLATFORM_QUALITY_UNVERIFIED']);
   assert.equal(JSON.stringify(report).includes('DISCORD_TOKEN'), false);
 });
 
@@ -40,5 +34,5 @@ test('both H1 installers fail closed before host-side setup can mutate anything'
 test('README does not imply completed inheritance or operational automatic updates', async () => {
   const readme = await source('README.md');
   assert.match(readme, /DO NOT RUN.*INSTALLER/i);
-  assert.match(readme, /INHERITANCE_NOT_VERIFIED/);
+  assert.match(readme, /APP_PLATFORM_QUALITY_UNVERIFIED/);
 });

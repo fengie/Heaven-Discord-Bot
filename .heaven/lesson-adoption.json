@@ -1,0 +1,29 @@
+{
+  "schema": "heaven-toolbox/child-lesson-adoption/v1",
+  "repository": "fengie/Heaven-Discord-Bot",
+  "toolboxRevision": "99312862f27cb9bba848cebc44317fd41b6651aa",
+  "sourceMode": "public-reviewed-invariants",
+  "parentLessonContentExported": false,
+  "regressionTests": [
+    {
+      "id": "release.atomic-promote-rollback",
+      "source": "src/update-transaction.mjs",
+      "test": "test/update-lifecycle.test.mjs",
+      "capability": "release.autoupdate"
+    },
+    {
+      "id": "host.least-privilege-ownership",
+      "source": "scripts/Install-HeavenBot.ps1",
+      "test": "test/windows-bootstrap-contract.test.mjs",
+      "capability": "runtime.background-jobs"
+    },
+    {
+      "id": "credentials.no-public-secrets",
+      "source": "src/config.mjs",
+      "test": "test/config.test.mjs",
+      "capability": "network.http"
+    }
+  ],
+  "feedbackContract": "heaven-toolbox/child-feedback/v1",
+  "authority": "NON_AUTHORITATIVE_SOURCE_EVIDENCE"
+}

@@ -48,6 +48,10 @@ function Run-Bot {
   Require-File $node
   Require-File (Join-Path $app 'src\index.mjs')
   $cfg = Get-Credentials
+  Require-File $sourceFile
+  $sourceSha = (Get-Content -LiteralPath $sourceFile -Raw -Encoding ASCII).Trim()
+  if ($sourceSha -notmatch '^[a-f0-9]{40}$') { Deny 'INSTALLED_SHA_INVALID' }
+  $env:HEAVEN_BOT_SOURCE_SHA = $sourceSha
   $secure = ConvertTo-SecureString -String ([string]$cfg.tokenDpapi)
   $ptr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
   try { $env:DISCORD_TOKEN = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($ptr) }
@@ -55,7 +59,7 @@ function Run-Bot {
   $env:NODE_ENV = 'production'
   $env:PATH = "$runtime;$env:PATH"
   try { & $node (Join-Path $app 'src\index.mjs') *>> $logFile }
-  finally { Remove-Item Env:DISCORD_TOKEN -ErrorAction SilentlyContinue }
+  finally { Remove-Item Env:DISCORD_TOKEN,Env:HEAVEN_BOT_SOURCE_SHA -ErrorAction SilentlyContinue }
   Deny 'BOT_PROCESS_EXITED'
 }
 
@@ -137,7 +141,7 @@ try {
 
   Write-Output 'HEAVEN: installing bot dependencies...'
   $env:PATH = "$runtime;$env:PATH"
-  & $node $npm install --prefix $app --omit=dev --ignore-scripts --no-audit --no-fund --loglevel=error | Out-Null
+  & $node $npm ci --prefix $app --omit=dev --ignore-scripts --no-audit --no-fund --loglevel=error | Out-Null
   if ($LASTEXITCODE -ne 0) { Deny 'NPM_INSTALL_FAILED' }
 
   if (-not (Test-Path -LiteralPath $credentials)) {
