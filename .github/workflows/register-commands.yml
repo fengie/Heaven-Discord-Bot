@@ -1,0 +1,39 @@
+name: Register Discord Commands
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/register-commands.yml'
+      - 'scripts/register-commands.mjs'
+      - 'src/commands.mjs'
+      - 'src/config.mjs'
+      - 'package.json'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: discord-command-registration
+  cancel-in-progress: false
+jobs:
+  register:
+    # Only trusted main. Never hand repo secrets to pull-request code.
+    if: github.repository == 'fengie/Heaven-Discord-Bot' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out trusted main
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24.17.0'
+      - name: Install dependencies without credential exposure
+        run: npm install --ignore-scripts --no-audit --no-fund
+      - name: Register slash commands in Discord
+        run: node scripts/register-commands.mjs
+        env:
+          DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
+          DISCORD_CLIENT_ID: ${{ secrets.DISCORD_CLIENT_ID }}
+          DISCORD_GUILD_ID: ${{ secrets.DISCORD_GUILD_ID }}
