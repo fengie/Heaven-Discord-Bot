@@ -21,6 +21,9 @@ jobs:
         run: npm install --ignore-scripts --no-audit --no-fund
       - name: Run unit and inherited bootstrap tests
         run: npm test
+      - name: Emit source-bound child feedback for parent triage
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: node scripts/emit-toolbox-feedback.mjs
       - name: Verify explicit Toolbox release hold
         run: node scripts/report-release-readiness.mjs --assert-held
       - name: Check source syntax
