@@ -34,5 +34,5 @@ test('both H1 installers fail closed before host-side setup can mutate anything'
 test('README does not imply completed inheritance or operational automatic updates', async () => {
   const readme = await source('README.md');
   assert.match(readme, /DO NOT RUN.*INSTALLER/i);
-  assert.match(readme, /INHERITANCE_NOT_VERIFIED/);
+  assert.match(readme, /APP_PLATFORM_QUALITY_UNVERIFIED/);
 });
