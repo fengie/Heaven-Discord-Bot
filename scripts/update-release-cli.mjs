@@ -19,7 +19,7 @@ try {
     if (!['https://github.com/fengie/Heaven-Discord-Bot.git','https://github.com/fengie/Heaven-Discord-Bot','git@github.com:fengie/Heaven-Discord-Bot.git'].includes(origin)) {
       fail('UPDATE_SOURCE_ORIGIN_INVALID');
     }
-    const files = execFileSync('git',['-C',arg1,'ls-files','-z'],{encoding:'utf8',timeout:15000,maxBuffer:1024*1024}).split('\0').filter(Boolean);
+    const files = execFileSync('git',['-C',arg1,'ls-files','-z'],{encoding:'utf8',timeout:15000,maxBuffer:1024*1024}).split('\0').filter(Boolean).filter(file => !['.env.example','.gitignore'].includes(file));
     result = await stageCandidate({root,source:arg1,revision:arg2,files});
   } else if (mode === 'activate') {
     result = await activateStaged({root,stage:arg1,revision:arg2,previousRevision:await readInstalledRevision(root)});
