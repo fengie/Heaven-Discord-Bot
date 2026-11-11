@@ -13,7 +13,8 @@ test('pinned Toolbox child contract and impact subscription are internally consi
   assert.equal(subscription.schema, 'heaven-toolbox/child-subscription/v1');
   assert.equal(subscription.repository, 'fengie/Heaven-Discord-Bot');
   assert.equal(subscription.toolboxRevision, entry.toolbox.revision);
-  assert.deepEqual(subscription.capabilities, []);
+  assert.deepEqual(subscription.capabilities, ['core.logging','network.http','runtime.background-jobs','release.autoupdate']);
+  assert.ok(!('hostRights' in subscription));
   assert.match(agents, /Assigned task packet/);
   assert.ok(agents.includes(entry.toolbox.revision));
   assert.equal(entry.taskPacket.assignedByGenerator, false);
