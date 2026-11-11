@@ -36,8 +36,6 @@ function Get-Credentials {
   Require-File $credentials
   $cfg = Get-Content -LiteralPath $credentials -Raw -Encoding UTF8 | ConvertFrom-Json
   if ([string]$cfg.schema -cne 'heaven-discord-bot/credentials/v1' -or
-    [string]$cfg.clientId -notmatch '^[0-9]{17,20}$' -or
-    ([string]$cfg.guildId -ne '' -and [string]$cfg.guildId -notmatch '^[0-9]{17,20}$') -or
     [string]::IsNullOrWhiteSpace([string]$cfg.tokenDpapi)) {
     Deny 'CREDENTIALS_INVALID'
   }
@@ -52,12 +50,10 @@ function Run-Bot {
   $ptr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
   try { $env:DISCORD_TOKEN = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($ptr) }
   finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($ptr) }
-  $env:DISCORD_CLIENT_ID = [string]$cfg.clientId
-  $env:DISCORD_GUILD_ID = [string]$cfg.guildId
   $env:NODE_ENV = 'production'
   $env:PATH = "$runtime;$env:PATH"
   try { & $node (Join-Path $app 'src\index.mjs') *>> $logFile }
-  finally { Remove-Item Env:DISCORD_TOKEN,Env:DISCORD_CLIENT_ID,Env:DISCORD_GUILD_ID -ErrorAction SilentlyContinue }
+  finally { Remove-Item Env:DISCORD_TOKEN -ErrorAction SilentlyContinue }
   Deny 'BOT_PROCESS_EXITED'
 }
 
@@ -143,21 +139,14 @@ try {
   if ($LASTEXITCODE -ne 0) { Deny 'NPM_INSTALL_FAILED' }
 
   if (-not (Test-Path -LiteralPath $credentials)) {
-    Write-Output 'Enter Discord credentials once on HEAVEN; token input is hidden.'
+    Write-Output 'Paste the Discord bot token once on HEAVEN; input is hidden.'
     $secureToken = Read-Host -AsSecureString -Prompt 'Discord bot token'
-    $clientId = [string](Read-Host -Prompt 'Discord Application ID')
-    $guildId = [string](Read-Host -Prompt 'Discord server ID (optional)')
-    if ($secureToken.Length -lt 30 -or $clientId -notmatch '^[0-9]{17,20}$' -or
-        ($guildId -ne '' -and $guildId -notmatch '^[0-9]{17,20}$')) {
-      Deny 'CREDENTIAL_INPUT_INVALID'
-    }
+    if ($secureToken.Length -lt 30) { Deny 'CREDENTIAL_INPUT_INVALID' }
     $cipher = ConvertFrom-SecureString -SecureString $secureToken
     $secureToken.Dispose()
     $configuration = @{
       schema = 'heaven-discord-bot/credentials/v1'
       tokenDpapi = $cipher
-      clientId = $clientId
-      guildId = $guildId
     } | ConvertTo-Json -Compress
     $pending = Join-Path $stage 'credentials.pending'
     [IO.File]::WriteAllText($pending, $configuration, ([Text.UTF8Encoding]::new($false)))
