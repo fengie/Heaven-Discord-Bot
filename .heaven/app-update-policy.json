@@ -1,0 +1,46 @@
+{
+  "apiVersion": "heaven.update/v1",
+  "policyVersion": "1",
+  "mode": "required",
+  "capability": "release.autoupdate",
+  "enabledByDefault": true,
+  "exceptionPolicy": {
+    "implicitExemptionsAllowed": false,
+    "requiresExplicitReviewedException": true
+  },
+  "integrity": {
+    "signedMetadata": true,
+    "artifactDigest": true,
+    "publisherIdentity": true
+  },
+  "transaction": {
+    "stageBeforeReplace": true,
+    "verifyBeforeInstall": true,
+    "atomicHandoff": true,
+    "rollbackRequired": true,
+    "interruptedUpdateRecovery": true,
+    "installedIdentityVerification": true
+  },
+  "hygiene": {
+    "updaterOwnedStagingOnly": true,
+    "cleanupAfterSuccess": true,
+    "cleanupAfterFailure": true,
+    "cleanupOnStartup": true,
+    "maxStagingAgeHours": 24
+  },
+  "runtime": {
+    "backgroundNoConsole": true,
+    "noFocusSteal": true,
+    "visibleStatus": true
+  },
+  "targets": [
+    {
+      "target": "server",
+      "delivery": "atomic-deployment",
+      "checkOnStartup": false,
+      "backgroundChecks": false,
+      "manualCheck": false,
+      "settingsToggle": false
+    }
+  ]
+}
