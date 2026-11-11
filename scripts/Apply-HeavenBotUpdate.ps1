@@ -121,6 +121,18 @@ try {
 
     # The parent repo updater is the one source-convergence authority.
     # This adapter validates the exact full checkout and never force-resets Git.
+    # Authenticate the published main and its GitHub-verified signature
+    # before any bot-owned process is stopped or a release is staged.
+    $published = (Git @('ls-remote','origin','refs/heads/main')) -split '\s+'
+    if ($published.Count -lt 2 -or $published[0].ToLowerInvariant() -cne $revision) {
+        Fail 'SOURCE_MAIN_PUBLICATION_CHANGED'
+    }
+    $uri = 'https://api.github.com/repos/fengie/Heaven-Discord-Bot/commits/' + $revision
+    $remoteCommit = Invoke-RestMethod -Uri $uri -Headers @{'User-Agent'='HeavenDiscordBot-Updater'}
+    if ([string]$remoteCommit.sha -cne $revision -or $remoteCommit.commit.verification.verified -ne $true) {
+        Fail 'PUBLISHER_SIGNATURE_UNVERIFIED'
+    }
+
     $result = NodeCli @('stage',$root,$repo,$revision)
     $stage = [string]$result.stage
     if (-not $stage.StartsWith((Join-Path $root '.stage-'),[StringComparison]::OrdinalIgnoreCase)) { Fail 'STAGE_IDENTITY_UNVERIFIED' }
@@ -141,7 +153,7 @@ try {
     if ([string](NodeCli @('current',$root)).revision -cne $revision) { Fail 'DEPLOYMENT_SOURCE_MISMATCH' }
     [pscustomobject]@{schema='heaven-discord-bot/update-adapter/v1';status='DEPLOYED';host='HEAVEN';installed_sha=$revision;source_sha=$revision;previous_sha=$old;gateway_ready=$true} | ConvertTo-Json -Compress
 } catch {
-    $allowed = @('HEAVEN1_REQUIRED','HEAVEN1_NATIVE_USER_REQUIRED','BOT_RUNTIME_NOT_INSTALLED','BOT_TASK_NOT_INSTALLED','FOREIGN_BOT_TASK_HOLD','BOT_TASK_DISABLED','BOT_UPDATE_BUSY','SOURCE_GIT_FAILED','SOURCE_ORIGIN_UNVERIFIED','SOURCE_NOT_CLEAN_MAIN','SOURCE_REVISION_UNVERIFIED','TOOLBOX_SOURCE_ADMISSION_HOLD','STAGE_IDENTITY_UNVERIFIED','STAGED_DEPENDENCIES_FAILED','STAGED_TESTS_FAILED','INSTALLED_SOURCE_MOVED','BOT_TASK_STATE_UNCONFIRMED','CANDIDATE_GATEWAY_UNVERIFIED','DEPLOYMENT_SOURCE_MISMATCH','BOT_UPDATE_OPERATION_FAILED','BOT_UPDATE_RECEIPT_INVALID')
+    $allowed = @('HEAVEN1_REQUIRED','HEAVEN1_NATIVE_USER_REQUIRED','BOT_RUNTIME_NOT_INSTALLED','BOT_TASK_NOT_INSTALLED','FOREIGN_BOT_TASK_HOLD','BOT_TASK_DISABLED','BOT_UPDATE_BUSY','SOURCE_GIT_FAILED','SOURCE_ORIGIN_UNVERIFIED','SOURCE_NOT_CLEAN_MAIN','SOURCE_REVISION_UNVERIFIED','SOURCE_MAIN_PUBLICATION_CHANGED','PUBLISHER_SIGNATURE_UNVERIFIED','TOOLBOX_SOURCE_ADMISSION_HOLD','STAGE_IDENTITY_UNVERIFIED','STAGED_DEPENDENCIES_FAILED','STAGED_TESTS_FAILED','INSTALLED_SOURCE_MOVED','BOT_TASK_STATE_UNCONFIRMED','CANDIDATE_GATEWAY_UNVERIFIED','DEPLOYMENT_SOURCE_MISMATCH','BOT_UPDATE_OPERATION_FAILED','BOT_UPDATE_RECEIPT_INVALID')
     $code = [string]$_.Exception.Message
     if ($code -cnotin $allowed) { $code = 'BOT_UPDATE_UNCLASSIFIED_HOLD' }
     if ($switched) {
