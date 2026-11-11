@@ -46,3 +46,21 @@ test('bot App Spec selects actual server-only capabilities', async () => {
   assert.ok(spec.capabilities.includes('core.logging'));
   assert.ok(spec.capabilities.includes('network.http'));
 });
+
+test('dependency graph is locked and consumed by every runtime package installer', async () => {
+  const manifest = await json('package.json');
+  const lock = await json('package-lock.json');
+  assert.equal(lock.lockfileVersion,3);
+  assert.equal(lock.name,manifest.name);
+  assert.deepEqual(lock.packages[''].dependencies,manifest.dependencies);
+  assert.ok(Object.keys(lock.packages).length>15);
+  for (const [name,value] of Object.entries(lock.packages)) {
+    if (name && !value.link) {
+      assert.ok(value.integrity?.startsWith('sha512-'),name+' missing SHA-512 integrity');
+    }
+  }
+  for (const path of ['Dockerfile','scripts/Install-HeavenBot.ps1','scripts/Apply-HeavenBotUpdate.ps1','.github/workflows/bot-ci.yml','.github/workflows/register-commands.yml']) {
+    const text = await file(path);
+    assert.match(text,/npm ci|\$npm ci/,path+' must install locked dependencies');
+  }
+});
