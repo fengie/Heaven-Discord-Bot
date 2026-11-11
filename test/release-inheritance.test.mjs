@@ -5,16 +5,14 @@ import test from 'node:test';
 const root = new URL('../', import.meta.url);
 const source = path => readFile(new URL(path, root), 'utf8');
 
-test('release inheritance reports missing real update, quality, lesson and feedback evidence', async () => {
+test('release inheritance reports remaining App Platform, lesson and adoption evidence', async () => {
   const { inspectReleaseInheritance } = await import('../src/release-inheritance.mjs');
   const report = await inspectReleaseInheritance(root);
   assert.equal(report.ready, false);
   assert.equal(report.schema, 'heaven-discord-bot/release-inheritance-check/v1');
   assert.deepEqual(report.blockers, [
     'APP_PLATFORM_QUALITY_UNVERIFIED',
-    'AUTOMATIC_RUNTIME_UPDATE_MISSING',
     'LESSON_ADOPTION_UNVERIFIED',
-    'REPOSITORY_UPDATE_POLICY_MISSING',
     'TOOLBOX_CAPABILITIES_UNADOPTED',
   ]);
   assert.equal(JSON.stringify(report).includes('DISCORD_TOKEN'), false);
