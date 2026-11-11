@@ -1,6 +1,7 @@
 import { REST, Routes } from 'discord.js';
 import { COMMAND_DEFINITIONS } from '../src/commands.mjs';
 import { getRegistrationConfig } from '../src/config.mjs';
+import { describeRegistrationError } from './registration-error.mjs';
 
 // Intentionally separate from bot startup: no registration on reconnect.
 async function register() {
@@ -16,11 +17,11 @@ async function register() {
 }
 
 register().catch(error => {
-  // Keep Discord's token and potentially sensitive HTTP details out of logs.
+  // Keep Discord's token, REST headers, URLs, and raw errors out of logs.
   if (error instanceof Error && /^(Missing|Invalid) DISCORD_/.test(error.message)) {
     console.error(error.message);
   } else {
-    console.error('discord.registration_failed (verify application ID, token, permissions, and network)');
+    console.error(describeRegistrationError(error));
   }
   process.exitCode = 1;
 });
