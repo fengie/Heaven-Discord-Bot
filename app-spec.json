@@ -4,17 +4,33 @@
   "metadata": {
     "name": "heaven-discord-bot",
     "displayName": "Heaven Discord Bot",
-    "description": "Discord Gateway slash-command service on Heaven1 with independently verified updates and rollback."
+    "description": "Discord Gateway slash-command service on Heaven1 with independently verified updates and rollback.",
+    "applicationId": "app.heaven.generated.heavendiscordbot"
   },
   "targets": [
     "server"
   ],
   "capabilities": [
-    "core.logging",
-    "network.http",
-    "runtime.background-jobs",
-    "release.autoupdate"
+    {
+      "id": "core.logging",
+      "config": {}
+    },
+    {
+      "id": "network.http",
+      "config": {}
+    },
+    {
+      "id": "runtime.background-jobs",
+      "config": {}
+    },
+    {
+      "id": "release.autoupdate",
+      "config": {}
+    }
   ],
+  "experience": {
+    "pages": []
+  },
   "quality": {
     "accessibility": false,
     "offline": false,
