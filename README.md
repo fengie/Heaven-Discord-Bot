@@ -20,7 +20,7 @@ npm test
 npm run check
 ```
 
-The suite includes the existing inherited Toolbox bootstrap contract plus command/configuration tests. GitHub Actions runs the same checks on pushes and pull requests.
+The suite includes the existing inherited Toolbox bootstrap contract plus command/configuration tests. GitHub Actions runs the same checks and a credential-free Docker build on pushes and pull requests.
 
 ## Credentials and registration (later)
 
@@ -44,7 +44,7 @@ After credentials and host access are available:
 
 ```sh
 docker compose build
-docker compose run --rm bot npm run register
+docker compose run --rm bot node scripts/register-commands.mjs
 docker compose up -d
 docker compose ps
 docker compose logs --tail=50 bot

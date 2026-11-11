@@ -7,7 +7,7 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - name: Check out source
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -23,3 +23,5 @@ jobs:
         run: npm test
       - name: Check source syntax
         run: npm run check
+      - name: Build H1 container definition (no credentials)
+        run: docker build --tag heaven-discord-bot:ci .
