@@ -1,6 +1,6 @@
 # Heaven Discord Bot
 
-**DO NOT RUN ANY INSTALLER — INHERITANCE_NOT_VERIFIED.** The application does not yet meet the mandatory Heaven Toolbox update, quality, lesson and capability adoption contracts. Both current installers and bot startup are intentionally release-held. Previously shared immutable installer URLs still execute their old versions and must not be used. See [Toolbox inheritance acceptance](docs/toolbox-inheritance-acceptance.md).
+**DO NOT RUN ANY INSTALLER — APP_PLATFORM_QUALITY_UNVERIFIED.** The bot now has separately tested source update policies, a transactional H1 update adapter, SHA-512 locked dependencies, applicable lesson/capability source mappings, and a metadata-only feedback producer. However, the actual private-parent App Platform generator/quality gate has not admitted this existing public child. Both current installers and Gateway startup remain release-held; previously shared immutable installer URLs still execute old versions and must not be used. Physical H1 deployment and runtime auto-update are not yet verified. See [Toolbox inheritance acceptance](docs/toolbox-inheritance-acceptance.md).
 
 Minimal Discord slash-command bot owned by `fengie`. Product-specific bot code lives here; shared engineering infrastructure remains in the private [Heaven Toolbox](https://github.com/fengie/heaven-toolbox) repository.
 
@@ -53,6 +53,12 @@ Do not remove `.env` unless intentionally revoking locally stored credentials.
 The [Register Discord Commands](https://github.com/fengie/Heaven-Discord-Bot/actions/workflows/register-commands.yml) workflow uses repository-scoped GitHub Actions secrets `DISCORD_TOKEN` and `DISCORD_CLIENT_ID` plus optional `DISCORD_GUILD_ID` to register commands on trusted `main`. It does not start the H1 runtime or transfer secrets to H1.
 
 Without `DISCORD_GUILD_ID`, registration is global and Discord may take time to propagate commands. Registration is **not** repeated on every startup.
+
+## Release updating
+
+The bot has distinct source and application update contracts. A product-specific H1 adapter at `scripts/Apply-HeavenBotUpdate.ps1` is intended to be invoked by the **existing private Toolbox repo updater** after that owner's managed-child catalog and host custody are verified. It stages only clean published source, checks the current main and commit signature, uses `npm ci` to reproduce pinned dependencies, verifies staged tests, switches only the owned bot task, and rolls back if Discord Gateway readiness fails. This adapter is **source/CI tested only**, not independently deployed on H1.
+
+Relevant private Toolbox capabilities and lessons are referenced by exact parent revision and mapped to public regression sources under `.heaven/`. Private modules, credentials, policies and full lesson text are not exported here; the metadata-only child feedback packet is emitted for separate parent review.
 
 ## Toolbox inheritance and feedback
 
