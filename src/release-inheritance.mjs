@@ -3,7 +3,10 @@ import { readFile } from 'node:fs/promises';
 const ROOT = new URL('../', import.meta.url);
 const isObject = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 
+const SAFE_PATH = /^[A-Za-z0-9_.-]+(?:\/[A-Za-z0-9_.-]+)*$/;
 async function content(root, relative) {
+  if (typeof relative !== 'string' || !SAFE_PATH.test(relative) ||
+      relative.split('/').some(p => p === '.' || p === '..')) return null;
   try { return await readFile(new URL(relative, root), 'utf8'); }
   catch { return null; }
 }
@@ -33,23 +36,47 @@ export async function inspectReleaseInheritance(root = ROOT) {
 
   const capabilities = subscription?.capabilities;
   const mapped = await json(root, '.heaven/component-adoption.json');
-  if (!validParent || !Array.isArray(capabilities) ||
-      !capabilities.includes('core.logging') ||
-      !capabilities.includes('release.autoupdate') ||
-      mapped?.schema !== 'heaven-toolbox/child-component-adoption/v1' ||
-      mapped?.toolboxRevision !== parentRevision ||
-      !Array.isArray(mapped.verifiedComponents) ||
-      mapped.verifiedComponents.length < 2) {
+  const applicable = ['core.logging','network.http','runtime.background-jobs','release.autoupdate'];
+  const componentEvidence = mapped?.components;
+  const componentCoverage = validParent && Array.isArray(capabilities) &&
+    applicable.every(id => capabilities.includes(id)) &&
+    mapped?.schema === 'heaven-toolbox/child-component-adoption/v1' &&
+    mapped?.toolboxRevision === parentRevision &&
+    mapped?.repository === 'fengie/Heaven-Discord-Bot' &&
+    mapped?.privateParentSourceCopied === false &&
+    Array.isArray(componentEvidence) &&
+    componentEvidence.length === applicable.length &&
+    componentEvidence.every(row =>
+      applicable.includes(row?.id) &&
+      row.evidenceState === 'SOURCE_TESTED' &&
+      Array.isArray(row.regressions) && row.regressions.length >= 1
+    ) &&
+    new Set(componentEvidence.map(row => row.id)).size === applicable.length;
+  if (!componentCoverage ||
+      !(await Promise.all(componentEvidence.map(async row =>
+        (await content(root,row.consumer)) !== null &&
+        (await Promise.all(row.regressions.map(path => content(root,path)))).every(Boolean)
+      ))).every(Boolean)) {
     blockers.add('TOOLBOX_CAPABILITIES_UNADOPTED');
   }
 
   const lessons = await json(root, '.heaven/lesson-adoption.json');
-  if (!validParent || entry?.feedback?.automaticParentWrite !== false ||
-      entry?.feedback?.automaticChildUpdate !== false ||
-      !entry?.toolbox?.lessonCatalogPath || !entry?.toolbox?.skillRootPath ||
-      lessons?.schema !== 'heaven-toolbox/child-lesson-adoption/v1' ||
-      lessons?.toolboxRevision !== parentRevision ||
-      !Array.isArray(lessons.reviewedTests) || lessons.reviewedTests.length < 1) {
+  const lessonEvidence = lessons?.regressionTests;
+  const lessonCoverage = validParent && entry?.feedback?.automaticParentWrite === false &&
+    entry?.feedback?.automaticChildUpdate === false &&
+    !!entry?.toolbox?.lessonCatalogPath && !!entry?.toolbox?.skillRootPath &&
+    lessons?.schema === 'heaven-toolbox/child-lesson-adoption/v1' &&
+    lessons?.toolboxRevision === parentRevision &&
+    lessons?.repository === 'fengie/Heaven-Discord-Bot' &&
+    lessons?.parentLessonContentExported === false &&
+    lessons?.feedbackContract === 'heaven-toolbox/child-feedback/v1' &&
+    Array.isArray(lessonEvidence) && lessonEvidence.length >= 3 &&
+    new Set(lessonEvidence.map(row => row.id)).size === lessonEvidence.length;
+  if (!lessonCoverage ||
+      !(await Promise.all(lessonEvidence.map(async row =>
+        (await content(root,row.source)) !== null &&
+        (await content(root,row.test)) !== null
+      ))).every(Boolean)) {
     blockers.add('LESSON_ADOPTION_UNVERIFIED');
   }
 
