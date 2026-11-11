@@ -53,8 +53,14 @@ jobs:
           $parseErrors = $null
           [System.Management.Automation.Language.Parser]::ParseFile($scriptPath, [ref]$tokens, [ref]$parseErrors) | Out-Null
           if ($parseErrors.Count -gt 0) { throw 'WINDOWS_BOOTSTRAP_PARSE_FAILED' }
-          $output = & powershell.exe -NoLogo -NoProfile -NonInteractive -File $scriptPath -Mode Install 2>&1
-          $exitCode = $LASTEXITCODE
+          $oldPreference = $ErrorActionPreference
+          try {
+            $ErrorActionPreference = 'Continue'
+            $output = & powershell.exe -NoLogo -NoProfile -NonInteractive -File $scriptPath -Mode Install 2>&1
+            $exitCode = $LASTEXITCODE
+          } finally {
+            $ErrorActionPreference = $oldPreference
+          }
           if ($exitCode -eq 0 -or ([string]($output -join ' ')) -notmatch 'HEAVEN1_REQUIRED') {
             throw 'WINDOWS_BOOTSTRAP_HOST_DENIAL_FAILED'
           }
