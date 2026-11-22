@@ -26,10 +26,16 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $p = Get-Content '.heaven/update-policy.json' -Raw | ConvertFrom-Json
           if ($p.schema -cne 'heaven-toolbox/update-policy/v1' -or $p.repository -cne 'fengie/Heaven-Discord-Bot' -or $p.branch -cne 'main' -or $p.kind -cne 'product') { throw 'TOOLBOX_REPO_UPDATE_CONTRACT_INVALID' }
-          if (-not $p.source_update.required -or $p.source_update.strategy -cne 'ff-only') { throw 'TOOLBOX_SOURCE_UPDATE_CONTRACT_INVALID' }
+          & ./scripts/Assert-HeavenBotSourceUpdate.ps1 -SourceUpdate $p.source_update | Out-Null
           if ($p.runtime_update.mode -cne 'apply-script' -or $p.runtime_update.apply_script -cne 'scripts/Apply-HeavenBotUpdate.ps1' -or -not (Test-Path -LiteralPath $p.runtime_update.apply_script -PathType Leaf)) { throw 'TOOLBOX_RUNTIME_UPDATER_MISSING' }
           $a = Get-Content '.heaven/app-update-policy.json' -Raw | ConvertFrom-Json
           if ($a.apiVersion -cne 'heaven.update/v1' -or $a.mode -cne 'required' -or -not $a.transaction.rollbackRequired -or -not $a.integrity.artifactDigest) { throw 'TOOLBOX_PRODUCT_UPDATER_CONTRACT_INVALID' }
+      - name: Verify source-update JSON scalar types on PowerShell 7
+        shell: pwsh
+        run: ./test/Test-HeavenBotSourceUpdateScalarTypes.ps1
+      - name: Verify source-update JSON scalar types on Windows PowerShell 5.1
+        shell: powershell
+        run: .\test\Test-HeavenBotSourceUpdateScalarTypes.ps1
       - name: Install test dependencies
         run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Verify updater and inherited product tests
