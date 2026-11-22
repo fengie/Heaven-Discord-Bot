@@ -37,3 +37,33 @@ export function buildChildFeedback({childRevision,toolboxRevision}) {
     ]
   };
 }
+
+
+const CHILD_REPOSITORY = 'fengie/Heaven-Discord-Bot';
+const PARENT_REPOSITORY = 'fengie/heaven-toolbox';
+const CAPABILITY = /^[a-z][a-z0-9]*(?:[.-][a-z0-9]+)*$/;
+
+/**
+ * The portable feedback revision must be the one declared by this exact
+ * child's subscription, never an independently asserted agent-entry SHA.
+ * This verifies committed lineage metadata, not installed runtime adoption.
+ */
+export function resolveFeedbackToolboxRevision(entry, subscription) {
+  const capabilities = subscription?.capabilities;
+  if (entry?.schema !== 'heaven-toolbox/child-agent-entry/v1' ||
+      entry?.toolbox?.repository !== PARENT_REPOSITORY ||
+      !SHA.test(entry.toolbox.revision ?? '') ||
+      subscription?.schema !== 'heaven-toolbox/child-subscription/v1' ||
+      subscription.repository !== CHILD_REPOSITORY ||
+      !SHA.test(subscription.toolboxRevision ?? '') ||
+      Object.keys(subscription).some(k => !['schema','repository','toolboxRevision','capabilities'].includes(k)) ||
+      !Array.isArray(capabilities) || capabilities.length > 32 ||
+      capabilities.some(x => typeof x !== 'string' || x.length > 96 || !CAPABILITY.test(x)) ||
+      new Set(capabilities).size !== capabilities.length) {
+    throw new TypeError('CHILD_FEEDBACK_INHERITANCE_INVALID');
+  }
+  if (entry.toolbox.revision !== subscription.toolboxRevision) {
+    throw new TypeError('CHILD_FEEDBACK_PIN_MISMATCH');
+  }
+  return subscription.toolboxRevision;
+}
