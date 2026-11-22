@@ -29,7 +29,13 @@ jobs:
           & ./scripts/Assert-HeavenBotSourceUpdate.ps1 -SourceUpdate $p.source_update | Out-Null
           if ($p.runtime_update.mode -cne 'apply-script' -or $p.runtime_update.apply_script -cne 'scripts/Apply-HeavenBotUpdate.ps1' -or -not (Test-Path -LiteralPath $p.runtime_update.apply_script -PathType Leaf)) { throw 'TOOLBOX_RUNTIME_UPDATER_MISSING' }
           $a = Get-Content '.heaven/app-update-policy.json' -Raw | ConvertFrom-Json
-          if ($a.apiVersion -cne 'heaven.update/v1' -or $a.mode -cne 'required' -or -not $a.transaction.rollbackRequired -or -not $a.integrity.artifactDigest) { throw 'TOOLBOX_PRODUCT_UPDATER_CONTRACT_INVALID' }
+          & ./scripts/Assert-HeavenBotAppUpdate.ps1 -AppUpdatePolicy $a | Out-Null
+      - name: Verify product-update JSON guards on PowerShell 7
+        shell: pwsh
+        run: ./test/Test-HeavenBotAppUpdateScalars.ps1
+      - name: Verify product-update JSON guards on Windows PowerShell 5.1
+        shell: powershell
+        run: .\test\Test-HeavenBotAppUpdateScalars.ps1
       - name: Verify source-update JSON scalar types on PowerShell 7
         shell: pwsh
         run: ./test/Test-HeavenBotSourceUpdateScalarTypes.ps1
