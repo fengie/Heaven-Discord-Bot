@@ -31,3 +31,45 @@ test('findings never declare automatic parent writes or verified deployment',()=
   assert.ok(!Object.hasOwn(packet,'deployed'));
   assert.ok(packet.findings.every(x=>x.verification.status==='unverified'));
 });
+
+
+test('portable feedback source revision must match the committed subscription and agent-entry pin', async () => {
+  const { resolveFeedbackToolboxRevision } = await import('../src/child-feedback.mjs');
+  assert.equal(typeof resolveFeedbackToolboxRevision, 'function',
+    'CLI lineage resolver must exist before emitting source-backed feedback');
+  const entry = {
+    schema:'heaven-toolbox/child-agent-entry/v1',
+    toolbox:{repository:'fengie/heaven-toolbox',revision:parent},
+  };
+  const subscription = {
+    schema:'heaven-toolbox/child-subscription/v1',
+    repository:'fengie/Heaven-Discord-Bot',
+    toolboxRevision:parent,
+    capabilities:['release.autoupdate'],
+  };
+  assert.equal(resolveFeedbackToolboxRevision(entry, subscription), parent);
+  assert.throws(
+    () => resolveFeedbackToolboxRevision(entry, {...subscription,toolboxRevision:'c'.repeat(40)}),
+    /CHILD_FEEDBACK_PIN_MISMATCH/
+  );
+  assert.throws(
+    () => resolveFeedbackToolboxRevision(entry, {...subscription,repository:'fengie/another-repo'}),
+    /CHILD_FEEDBACK_INHERITANCE_INVALID/
+  );
+  assert.throws(
+    () => resolveFeedbackToolboxRevision({...entry,toolbox:{...entry.toolbox,repository:'other/private'}},subscription),
+    /CHILD_FEEDBACK_INHERITANCE_INVALID/
+  );
+  assert.throws(
+    () => resolveFeedbackToolboxRevision(entry, {...subscription,toolboxRevision:'not-a-sha'}),
+    /CHILD_FEEDBACK_INHERITANCE_INVALID/
+  );
+  assert.throws(
+    () => resolveFeedbackToolboxRevision(entry, {...subscription,capabilities:['release.autoupdate','release.autoupdate']}),
+    /CHILD_FEEDBACK_INHERITANCE_INVALID/
+  );
+  assert.throws(
+    () => resolveFeedbackToolboxRevision({...entry,schema:'invalid'},subscription),
+    /CHILD_FEEDBACK_INHERITANCE_INVALID/
+  );
+});
