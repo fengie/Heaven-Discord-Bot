@@ -23,13 +23,22 @@ $cases = @(
   @{ name='object interval'; required='true'; interval='{}'; strategy='ff-only'; accept=$false }
   @{ name='missing interval'; required='true'; interval=$null; strategy='ff-only'; accept=$false }
   @{ name='incorrect strategy'; required='true'; interval='1'; strategy='force'; accept=$false }
+  @{ name='missing controller'; required='true'; interval='1'; strategy='ff-only'; controller=$null; accept=$false }
+  @{ name='foreign controller'; required='true'; interval='1'; strategy='ff-only'; controller='"other/controller"'; accept=$false }
+  @{ name='null controller'; required='true'; interval='1'; strategy='ff-only'; controller='null'; accept=$false }
+  @{ name='case changed controller'; required='true'; interval='1'; strategy='ff-only'; controller='"HEAVEN-TOOLBOX/repo-autoupdate"'; accept=$false }
+  @{ name='array controller'; required='true'; interval='1'; strategy='ff-only'; controller='["heaven-toolbox/repo-autoupdate"]'; accept=$false }
+  @{ name='boolean controller'; required='true'; interval='1'; strategy='ff-only'; controller='true'; accept=$false }
 )
 $valid = 0
 $invalid = 0
 foreach ($case in $cases) {
   $memberRequired = if ($null -eq $case.required) { '' } else { '"required":' + $case.required + ',' }
   $memberInterval = if ($null -eq $case.interval) { '' } else { ',"poll_interval_minutes":' + $case.interval }
-  $json = '{"source_update":{' + $memberRequired + '"strategy":"' + $case.strategy + '"' + $memberInterval + '}}'
+  $memberController = if (-not $case.ContainsKey('controller')) {
+    ',"controller":"heaven-toolbox/repo-autoupdate"'
+  } elseif ($null -eq $case.controller) { '' } else { ',"controller":' + $case.controller }
+  $json = '{"source_update":{' + $memberRequired + '"strategy":"' + $case.strategy + '"' + $memberInterval + $memberController + '}}'
   $source = ($json | ConvertFrom-Json).source_update
   $failure = $null
   try { & $validator -SourceUpdate $source | Out-Null }
