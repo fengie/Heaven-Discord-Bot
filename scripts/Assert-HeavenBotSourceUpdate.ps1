@@ -6,7 +6,9 @@ $ErrorActionPreference = 'Stop'
 if ($SourceUpdate -isnot [pscustomobject] -or
     $SourceUpdate.required -isnot [bool] -or
     $SourceUpdate.required -ne $true -or
-    $SourceUpdate.strategy -cne 'ff-only') {
+    $SourceUpdate.strategy -cne 'ff-only' -or
+    $SourceUpdate.controller -isnot [string] -or
+    $SourceUpdate.controller -cne 'heaven-toolbox/repo-autoupdate') {
   throw 'TOOLBOX_SOURCE_UPDATE_CONTRACT_INVALID'
 }
 # Do not coerce quoted JSON strings, floats or Booleans into an interval.
