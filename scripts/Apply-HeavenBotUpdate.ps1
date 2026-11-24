@@ -2,7 +2,7 @@
 [CmdletBinding()]
 param(
     [string]$RepoRoot = (Join-Path $PSScriptRoot '..'),
-    [string]$ExpectedSha = '',
+    [Alias('ExpectedSourceSha')][string]$ExpectedSha = '',
     [switch]$DiagnosticsOnly
 )
 Set-StrictMode -Version Latest
