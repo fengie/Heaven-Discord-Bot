@@ -1,0 +1,3 @@
+# Source-bound App Platform adoption compares these paths with reviewed Git blobs.
+/package.json text eol=lf
+/src/index.mjs text eol=lf
