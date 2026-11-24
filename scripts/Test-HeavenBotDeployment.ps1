@@ -2,7 +2,9 @@
 [CmdletBinding()]
 param(
     [string]$RepoRoot = (Join-Path $PSScriptRoot '..'),
-    [Parameter(Mandatory = $true)][string]$ExpectedSourceSha
+    [Parameter(Mandatory = $true)][string]$ExpectedSourceSha,
+    [string]$RollbackFromSha = '',
+    [ValidateRange(0,120)][int]$MaxReadyAgeSeconds = 0
 )
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
@@ -21,13 +23,31 @@ $exe = Join-Path $PSHOME 'powershell.exe'
 $args = '-NoLogo -NoProfile -NonInteractive -WindowStyle Hidden -ExecutionPolicy Bypass -File "' + $script + '" -Mode Run'
 $nativeUser = [Security.Principal.WindowsIdentity]::GetCurrent()
 
+# A rollback readback is distinct from normal canonical-source deployment
+# verification. The requested older commit must be an ancestor of the exact
+# candidate checkout; no checkout or Git ref is changed by this verifier.
+function Get-VerifiedCheckout([string]$Repo,[string]$Expected,[string]$RollbackFrom='') {
+    if ($Expected -cnotmatch '^[a-f0-9]{40}$' -or
+        ($RollbackFrom -and ($RollbackFrom -cnotmatch '^[a-f0-9]{40}$' -or $RollbackFrom -ceq $Expected))) {
+        Hold 'SOURCE_SHA_MISMATCH'
+    }
+    $head = (& git -C $Repo rev-parse HEAD).Trim().ToLowerInvariant()
+    $expectedHead = if ($RollbackFrom) { $RollbackFrom } else { $Expected }
+    if ($LASTEXITCODE -ne 0 -or $head -cne $expectedHead) { Hold 'SOURCE_SHA_MISMATCH' }
+    if ($RollbackFrom) {
+        & git -C $Repo merge-base --is-ancestor $Expected $head
+        if ($LASTEXITCODE -ne 0) { Hold 'ROLLBACK_SOURCE_NOT_ANCESTOR' }
+    }
+    return $head
+}
+
 function Verify-GitBlob([string]$Relative) {
     $path = Join-Path $app $Relative
     if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { Hold 'INSTALLED_BLOB_MISSING' }
     $item = Get-Item -LiteralPath $path -Force
     if (($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0 -or $item.Length -gt 2097152) { Hold 'INSTALLED_BLOB_UNSAFE' }
     $gitPath = $Relative.Replace('\','/')
-    $gitHash = (& git -C $repo rev-parse ('HEAD:'+$gitPath)).Trim().ToLowerInvariant()
+    $gitHash = (& git -C $repo rev-parse ($ExpectedSourceSha+':'+$gitPath)).Trim().ToLowerInvariant()
     if ($LASTEXITCODE -ne 0 -or $gitHash -notmatch '^[a-f0-9]{40}$') { Hold 'SOURCE_BLOB_UNVERIFIED' }
     $bytes = [IO.File]::ReadAllBytes($path)
     $header = [Text.Encoding]::ASCII.GetBytes('blob ' + $bytes.Length + [char]0)
@@ -46,8 +66,7 @@ try {
         -not (Test-Path -LiteralPath $log -PathType Leaf)) { Hold 'BOT_RUNTIME_MISSING' }
     $installed = (Get-Content -LiteralPath $pointer -Raw -Encoding ASCII).Trim()
     if ($installed -cne $ExpectedSourceSha) { Hold 'INSTALLED_SHA_MISMATCH' }
-    $head = (& git -C $repo rev-parse HEAD).Trim().ToLowerInvariant()
-    if ($LASTEXITCODE -ne 0 -or $head -cne $ExpectedSourceSha) { Hold 'SOURCE_SHA_MISMATCH' }
+    $head = Get-VerifiedCheckout $repo $ExpectedSourceSha $RollbackFromSha
 
     $task = Get-ScheduledTask -TaskName $taskName -ErrorAction Stop
     $actions = @($task.Actions)
@@ -71,7 +90,9 @@ try {
                 [string]$event.sourceSha -cne $ExpectedSourceSha -or
                 [int]$event.pid -le 0) { continue }
             $observed = [DateTimeOffset]::Parse([string]$event.observedAt)
-            if ($observed -gt [DateTimeOffset]::UtcNow.AddSeconds(5)) { continue }
+            $now = [DateTimeOffset]::UtcNow
+            if ($observed -gt $now.AddSeconds(5) -or
+                ($MaxReadyAgeSeconds -gt 0 -and ($observed -gt $now -or $observed -lt $now.AddSeconds(-$MaxReadyAgeSeconds)))) { continue }
             $ready = $event
         } catch {}
     }
@@ -86,9 +107,14 @@ try {
     $started = [DateTimeOffset]::Parse([string]$process.CreationDate)
     $observed = [DateTimeOffset]::Parse([string]$ready.observedAt)
     if ($started -gt $observed -or $observed -gt [DateTimeOffset]::UtcNow.AddSeconds(5)) { Hold 'GATEWAY_PROCESS_IDENTITY_CHANGED' }
+    if ((Get-VerifiedCheckout $repo $ExpectedSourceSha $RollbackFromSha) -cne $head -or
+        (Get-Content -LiteralPath $pointer -Raw -Encoding ASCII).Trim() -cne $installed) {
+        Hold 'SOURCE_OR_INSTALL_MOVED'
+    }
     [pscustomobject]@{
         schema = 'heaven-discord-bot/deployment-verification/v1'
-        status = 'verified'
+        status = $(if ($RollbackFromSha) { 'rollback_verified' } else { 'verified' })
+        checkout_sha = $head
         source_sha = $ExpectedSourceSha
         installed_sha = $installed
         host = 'HEAVEN'

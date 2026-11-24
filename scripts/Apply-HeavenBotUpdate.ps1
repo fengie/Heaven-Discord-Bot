@@ -61,23 +61,25 @@ function Await-TaskState([string]$State,[int]$Seconds) {
     }
     Fail 'BOT_TASK_STATE_UNCONFIRMED'
 }
-function Await-Gateway([int]$Seconds,[string]$ExpectedRevision) {
+function Await-Gateway([int]$Seconds,[string]$ExpectedRevision,[string]$RollbackFromSha='') {
+    $verifier = Join-Path $repo 'scripts\Test-HeavenBotDeployment.ps1'
+    $expectedStatus = if ($RollbackFromSha) { 'rollback_verified' } else { 'verified' }
+    $expectedCheckout = if ($RollbackFromSha) { $RollbackFromSha } else { $ExpectedRevision }
     for($i=0;$i -lt $Seconds;$i+=2) {
         Start-Sleep -Seconds 2
-        $state = [string](Get-ScheduledTask -TaskName $taskName).State
-        if ($state -eq 'Running' -and (Test-Path -LiteralPath $log -PathType Leaf)) {
-            foreach ($line in @(Get-Content -LiteralPath $log -Tail 20 -ErrorAction SilentlyContinue)) {
-                try {
-                    $event = [string]$line | ConvertFrom-Json -ErrorAction Stop
-                    if ([string]$event.event -cne 'discord.ready' -or
-                        [string]$event.sourceSha -cne $ExpectedRevision -or
-                        [int]$event.pid -le 0) { continue }
-                    $when = [DateTimeOffset]::Parse([string]$event.observedAt)
-                    if ($when -le [DateTimeOffset]::UtcNow -and
-                        $when -ge [DateTimeOffset]::UtcNow.AddMinutes(-2)) { return $true }
-                } catch { }
-            }
-        }
+        try {
+            $parameters = @{RepoRoot=$repo;ExpectedSourceSha=$ExpectedRevision;MaxReadyAgeSeconds=120}
+            if ($RollbackFromSha) { $parameters.RollbackFromSha=$RollbackFromSha }
+            $raw = @(& $verifier @parameters)
+            if ($raw.Count -ne 1) { continue }
+            $proof = [string]$raw[0] | ConvertFrom-Json -ErrorAction Stop
+            if ([string]$proof.schema -ceq 'heaven-discord-bot/deployment-verification/v1' -and
+                [string]$proof.status -ceq $expectedStatus -and
+                [string]$proof.source_sha -ceq $ExpectedRevision -and
+                [string]$proof.installed_sha -ceq $ExpectedRevision -and
+                [string]$proof.checkout_sha -ceq $expectedCheckout -and
+                [string]$proof.host -ceq 'HEAVEN') { return $true }
+        } catch { }
     }
     return $false
 }
@@ -157,8 +159,8 @@ try {
     [void](NodeCli @('activate',$root,$stage,$revision))
     BotOwnedTaskStart
     if (-not (Await-Gateway -Seconds 60 -ExpectedRevision $revision)) { Fail 'CANDIDATE_GATEWAY_UNVERIFIED' }
-    [void](NodeCli @('confirm',$root,$revision))
     if ([string](NodeCli @('current',$root)).revision -cne $revision) { Fail 'DEPLOYMENT_SOURCE_MISMATCH' }
+    [void](NodeCli @('confirm',$root,$revision))
     [pscustomobject]@{schema='heaven-discord-bot/update-adapter/v1';status='DEPLOYED';host='HEAVEN';installed_sha=$revision;source_sha=$revision;previous_sha=$old;gateway_ready=$true} | ConvertTo-Json -Compress
 } catch {
     $allowed = @('HEAVEN1_REQUIRED','HEAVEN1_NATIVE_USER_REQUIRED','BOT_RUNTIME_NOT_INSTALLED','BOT_TASK_NOT_INSTALLED','FOREIGN_BOT_TASK_HOLD','BOT_TASK_DISABLED','BOT_UPDATE_BUSY','SOURCE_GIT_FAILED','SOURCE_ORIGIN_UNVERIFIED','SOURCE_NOT_CLEAN_MAIN','SOURCE_REVISION_UNVERIFIED','SOURCE_MAIN_PUBLICATION_CHANGED','PUBLISHER_SIGNATURE_UNVERIFIED','TOOLBOX_SOURCE_ADMISSION_HOLD','STAGE_IDENTITY_UNVERIFIED','STAGED_DEPENDENCIES_FAILED','STAGED_TESTS_FAILED','INSTALLED_SOURCE_MOVED','BOT_TASK_STATE_UNCONFIRMED','CANDIDATE_GATEWAY_UNVERIFIED','DEPLOYMENT_SOURCE_MISMATCH','BOT_UPDATE_OPERATION_FAILED','BOT_UPDATE_RECEIPT_INVALID')
@@ -169,7 +171,7 @@ try {
             BotOwnedTaskStop
             [void](NodeCli @('recover',$root))
             BotOwnedTaskStart
-            if (-not (Await-Gateway -Seconds 60 -ExpectedRevision $old)) { Fail 'ROLLBACK_GATEWAY_UNVERIFIED' }
+            if (-not (Await-Gateway -Seconds 60 -ExpectedRevision $old -RollbackFromSha $revision)) { Fail 'ROLLBACK_GATEWAY_UNVERIFIED' }
             Write-Output 'BOT_UPDATE_ROLLED_BACK'
         } catch { Write-Output 'BOT_UPDATE_ROLLBACK_UNVERIFIED' }
     }
