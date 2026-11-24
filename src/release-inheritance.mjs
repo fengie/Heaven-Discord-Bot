@@ -1,4 +1,5 @@
 import { readFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 
 const ROOT = new URL('../', import.meta.url);
 const isObject = value => value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -18,6 +19,65 @@ async function json(root, relative) {
     const value = JSON.parse(raw);
     return isObject(value) ? value : null;
   } catch { return null; }
+}
+
+// Local consistency checks are useful evidence, not independent parent
+// approval. They must never execute a caller-selected workflow or trust its
+// presence as proof of a passed run.
+const expectedChecks = [
+  'adapter-contracts', 'adapter:server:existing-node-product-tests',
+  'adapter:server:existing-node-runtime-acceptance', 'adapter:server:existing-node-source-binding',
+  'app-spec-valid', 'automatic-update-contract', 'capability-plan-resolves',
+  'no-unresolved-template-tokens', 'performance-budget', 'scaffold-integrity',
+  'security-baseline', 'update:server:atomic-deployment',
+];
+const expectedFiles = [
+  '.heaven/agent-entry.json', '.heaven/app-update-policy.json', '.heaven/manifest.json',
+  '.heaven/quality-plan.json', 'AGENTS.md', 'README.md', 'app-spec.json',
+  'package.json', 'src/index.mjs', 'src/shared/README.md', 'targets/server/heaven.adapter.json',
+];
+function canonical(value) {
+  if (Array.isArray(value)) return value.map(canonical);
+  if (isObject(value)) return Object.fromEntries(Object.keys(value).sort().map(key => [key, canonical(value[key])]));
+  return value;
+}
+const same = (left, right) => JSON.stringify(canonical(left)) === JSON.stringify(canonical(right));
+const digest = value => createHash('sha256').update(value, 'utf8').digest('hex');
+
+async function inspectGeneratedContract(root) {
+  const [app, manifest, quality, adapter, policy, pkg, entrypoint] = await Promise.all([
+    json(root, 'app-spec.json'), json(root, '.heaven/manifest.json'),
+    json(root, '.heaven/quality-plan.json'), json(root, 'targets/server/heaven.adapter.json'),
+    json(root, '.heaven/app-update-policy.json'), content(root, 'package.json'), content(root, 'src/index.mjs'),
+  ]);
+  try {
+    if (app?.apiVersion !== 'heaven.app/v1' || app.kind !== 'Application' ||
+        app.metadata?.name !== 'heaven-discord-bot' || !same(app.targets, ['server']) ||
+        !Array.isArray(app.capabilities) || !manifest || !quality || !adapter || !policy ||
+        typeof pkg !== 'string' || typeof entrypoint !== 'string') return false;
+    const specHash = digest(JSON.stringify(canonical(app)));
+    if (manifest.apiVersion !== 'heaven.generated/v1' || manifest.layoutVersion !== 3 ||
+        manifest.app !== 'heaven-discord-bot' || manifest.specHash !== specHash ||
+        !same(manifest.targets, ['server']) || !same(manifest.files, expectedFiles) ||
+        !same(manifest.adapters, [{ target:'server', id:'server.existing-node-esm', framework:'node' }]) ||
+        !same(manifest.updatePolicy, policy) || !Array.isArray(manifest.qualityChecks) ||
+        !same(manifest.qualityChecks.map(row => row?.id), expectedChecks) ||
+        manifest.qualityChecks.some(row => row?.required !== true) ||
+        quality.apiVersion !== 'heaven.quality/v1' || quality.app !== manifest.app ||
+        quality.specHash !== specHash || !same(quality.checks, manifest.qualityChecks) ||
+        adapter.apiVersion !== 'heaven.adapter/v1' || adapter.adapter !== 'server.existing-node-esm' ||
+        adapter.framework !== 'node' || adapter.target !== 'server' || adapter.root !== 'repository' ||
+        adapter.entrypoint !== 'src/index.mjs' || adapter.startCommand !== 'node src/index.mjs' ||
+        adapter.sourceBinding !== 'caller-reviewed-bytes' || adapter.runtimeVerified !== false) return false;
+    // Allow only ordinary Git LF/CRLF checkout conversion for this local
+    // diagnostic. The independent parent gate still verifies raw Git bytes.
+    const matches = (bytes, expected) => /^[a-f0-9]{64}$/.test(expected ?? '') &&
+      (digest(bytes) === expected || digest(bytes.replace(/\r\n/g, '\n')) === expected);
+    if (!matches(pkg, adapter.sourceDigests?.package) || !matches(entrypoint, adapter.sourceDigests?.entrypoint)) return false;
+    return (await Promise.all(expectedFiles.map(path => content(root, path)))).every(value => value !== null);
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -80,16 +140,12 @@ export async function inspectReleaseInheritance(root = ROOT) {
     blockers.add('LESSON_ADOPTION_UNVERIFIED');
   }
 
-  const app = await json(root, 'app-spec.json');
-  const manifest = await json(root, '.heaven/manifest.json');
-  const quality = await json(root, '.heaven/quality-plan.json');
-  if (app?.apiVersion !== 'heaven.app/v1' ||
-      !app?.targets?.includes('server') ||
-      !Array.isArray(app.capabilities) ||
-      manifest === null || quality === null ||
-      (await content(root, '.github/workflows/app-platform-quality.yml')) === null) {
-    blockers.add('APP_PLATFORM_QUALITY_UNVERIFIED');
-  }
+  const contractValid = await inspectGeneratedContract(root);
+  if (!contractValid) blockers.add('APP_PLATFORM_CONTRACT_INVALID');
+  // This local source inspector has no independently authenticated parent
+  // receipt transport. A generated manifest or workflow is not that receipt.
+  // Keep release held until the reviewed parent authority is wired end to end.
+  blockers.add('APP_PLATFORM_QUALITY_UNVERIFIED');
 
   const repoUpdate = await json(root, '.heaven/update-policy.json');
   const repoWorkflow = await content(root, '.github/workflows/heaven-autoupdate-policy.yml');

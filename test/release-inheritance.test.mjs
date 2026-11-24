@@ -36,3 +36,30 @@ test('README does not imply completed inheritance or operational automatic updat
   assert.match(readme, /DO NOT RUN.*INSTALLER/i);
   assert.match(readme, /APP_PLATFORM_QUALITY_UNVERIFIED/);
 });
+
+
+test('local workflow and caller-authored quality metadata cannot authorize Gateway startup', async t => {
+  const { inspectReleaseInheritance } = await import('../src/release-inheritance.mjs');
+  const { cp, mkdtemp, mkdir, writeFile, rm } = await import('node:fs/promises');
+  const { join } = await import('node:path');
+  const { tmpdir } = await import('node:os');
+  const { pathToFileURL } = await import('node:url');
+  const fixture = await mkdtemp(join(tmpdir(), 'discord-quality-admission-'));
+  t.after(() => rm(fixture, { recursive: true, force: true }));
+  for (const relative of ['.heaven', 'src', 'scripts', 'test', 'targets', '.github', 'app-spec.json', 'package.json', 'AGENTS.md', 'README.md']) {
+    await cp(new URL(relative, root), join(fixture, relative), { recursive: true });
+  }
+  await mkdir(join(fixture, '.github', 'workflows'), { recursive: true });
+  await writeFile(join(fixture, '.github', 'workflows', 'app-platform-quality.yml'), 'name: fabricated local quality evidence\n');
+  const directory = pathToFileURL(fixture + '/');
+  const withWorkflow = await inspectReleaseInheritance(directory);
+  assert.equal(withWorkflow.ready, false, 'workflow presence is not independent parent approval');
+  assert.ok(withWorkflow.blockers.includes('APP_PLATFORM_QUALITY_UNVERIFIED'));
+
+  await writeFile(join(fixture, '.heaven', 'manifest.json'), JSON.stringify({ ready: true, qualityValid: true }));
+  await writeFile(join(fixture, '.heaven', 'quality-plan.json'), JSON.stringify({ ready: true, qualityValid: true }));
+  const forged = await inspectReleaseInheritance(directory);
+  assert.equal(forged.ready, false, 'caller-authored JSON is not a quality result');
+  assert.ok(forged.blockers.includes('APP_PLATFORM_QUALITY_UNVERIFIED'));
+  assert.ok(forged.blockers.includes('APP_PLATFORM_CONTRACT_INVALID'));
+});
