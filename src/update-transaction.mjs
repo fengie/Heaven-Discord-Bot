@@ -125,7 +125,8 @@ async function readJournal(root) {
     await plainFile(path);
     const journal = JSON.parse(await readFile(path,'utf8'));
     if (!journal || journal.schema !== 'heaven-discord-bot/update-journal/v1' ||
-        !SHA.test(journal.previousRevision) || !SHA.test(journal.revision) ||
+        typeof journal.previousRevision!=='string' || typeof journal.revision!=='string' ||
+      !SHA.test(journal.previousRevision) || !SHA.test(journal.revision) ||
         journal.previousRevision === journal.revision ||
         Object.keys(journal).sort().join(',') !== 'previousRevision,revision,schema') fail('INVALID_JOURNAL');
     return journal;
@@ -187,8 +188,10 @@ export async function recoverInterrupted(root) {
       if (await exists(failedPath)) fail('FAILED_RELEASE_OCCUPIED');
       await rename(application,failedPath);
     }
-    await rename(previous,application);
+    // Keep the previous directory available until its pointer is durable.
+    // A failed pointer write or interrupted rename can then be retried from the journal.
     await writePointer(root,journal.previousRevision);
+    await rename(previous,application);
     await rm(join(root,JOURNAL));
     return {recovered:true,revision:journal.previousRevision};
   }

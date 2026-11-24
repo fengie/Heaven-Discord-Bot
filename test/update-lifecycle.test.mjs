@@ -118,3 +118,41 @@ test('reviewed Node adoption sources retain exact Git blob bytes with Windows li
     await rm(checkout, { recursive: true, force: true });
   }
 });
+
+test('rollback retains the previous release across a blocked pointer write', async () => fixture(async ({root,source}) => {
+  const {stage} = await stageCandidate({root,source,revision:newSha,files:['package.json','src/index.mjs']});
+  await activateStaged({root,stage,revision:newSha,previousRevision:oldSha});
+  const blocker = join(root,'.source-'+oldSha+'.tmp');
+  await writeFile(blocker,'foreign pointer file');
+  await assert.rejects(recoverInterrupted(root),{code:'EEXIST'});
+  assert.equal(await readFile(blocker,'utf8'),'foreign pointer file');
+  assert.equal(await readInstalledRevision(root),newSha);
+  assert.ok((await readdir(root)).includes('previous-'+oldSha),'ROLLBACK_PREVIOUS_RELEASE_LOST_BEFORE_POINTER_WRITE');
+  assert.equal(await readFile(join(root,'previous-'+oldSha,'sentinel.txt'),'utf8'),'original');
+  assert.ok((await readdir(root)).includes('update-journal.json'));
+  assert.equal(await readFile(join(root,'failed-'+newSha,'src','index.mjs'),'utf8'),'console.log("candidate")');
+  await rm(blocker);
+  assert.deepEqual(await recoverInterrupted(root),{recovered:true,revision:oldSha});
+  assert.equal(await readInstalledRevision(root),oldSha);
+  assert.equal(await readFile(join(root,'app','sentinel.txt'),'utf8'),'original');
+  assert.ok(!(await readdir(root)).includes('update-journal.json'));
+  assert.deepEqual(await recoverInterrupted(root),{recovered:false});
+}));
+
+for (const field of ['revision','previousRevision']) {
+  test('rejects coerced journal '+field+' before any rollback mutation', async () => fixture(async ({root,source}) => {
+    const {stage} = await stageCandidate({root,source,revision:newSha,files:['package.json','src/index.mjs']});
+    await activateStaged({root,stage,revision:newSha,previousRevision:oldSha});
+    const journalPath = join(root,'update-journal.json');
+    const journal = JSON.parse(await readFile(journalPath,'utf8'));
+    journal[field] = [journal[field]];
+    const malformed = JSON.stringify(journal);
+    await writeFile(journalPath,malformed);
+    await assert.rejects(recoverInterrupted(root),/INVALID_JOURNAL/);
+    assert.equal(await readInstalledRevision(root),newSha);
+    assert.equal(await readFile(join(root,'app','src','index.mjs'),'utf8'),'console.log("candidate")');
+    assert.equal(await readFile(join(root,'previous-'+oldSha,'sentinel.txt'),'utf8'),'original');
+    assert.ok(!(await readdir(root)).includes('failed-'+newSha));
+    assert.equal(await readFile(journalPath,'utf8'),malformed);
+  }));
+}
