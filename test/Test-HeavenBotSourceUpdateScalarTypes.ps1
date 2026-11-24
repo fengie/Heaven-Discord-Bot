@@ -45,3 +45,16 @@ foreach ($case in $cases) {
   }
 }
 "SOURCE_UPDATE_SCALAR_TYPES_PASSED valid=$valid invalid=$invalid"
+
+# The existing Toolbox updater passes -RepoRoot and -ExpectedSourceSha.
+# Inspect actual PowerShell binding metadata without running the host updater.
+$applyCommand = Get-Command -Name (Join-Path $PSScriptRoot '../scripts/Apply-HeavenBotUpdate.ps1') -CommandType ExternalScript -ErrorAction Stop
+$sourceParameter = @($applyCommand.Parameters.Values | Where-Object {
+    $_.Name -ceq 'ExpectedSourceSha' -or $_.Aliases -ccontains 'ExpectedSourceSha'
+})
+if ($sourceParameter.Count -ne 1) { throw 'TOOLBOX_RUNTIME_APPLY_EXPECTED_SOURCE_SHA_MISSING' }
+if ($sourceParameter[0].ParameterType -ne [string] -or
+    ($sourceParameter[0].Name -cne 'ExpectedSha' -and $sourceParameter[0].Aliases -cnotcontains 'ExpectedSha')) {
+    throw 'TOOLBOX_RUNTIME_APPLY_LEGACY_BINDING_CHANGED'
+}
+'TOOLBOX_RUNTIME_APPLY_PARAMETER_CONTRACT_PASSED'
