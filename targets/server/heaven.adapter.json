@@ -1,0 +1,15 @@
+{
+  "apiVersion": "heaven.adapter/v1",
+  "adapter": "server.existing-node-esm",
+  "framework": "node",
+  "target": "server",
+  "root": "repository",
+  "entrypoint": "src/index.mjs",
+  "startCommand": "node src/index.mjs",
+  "sourceDigests": {
+    "package": "d6374b8ced431849157fe5d2fac586a4a023d02e8795e6f22cff5b0568ad015e",
+    "entrypoint": "ce7205a595860a4e609dd2d964f8d5b85c13a300301c03a8051696f5559fba2e"
+  },
+  "sourceBinding": "caller-reviewed-bytes",
+  "runtimeVerified": false
+}
