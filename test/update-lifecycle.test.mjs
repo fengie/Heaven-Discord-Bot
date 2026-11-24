@@ -71,3 +71,50 @@ test('a corrupt installed pointer or unknown journal fails without overwriting d
   await assert.rejects(recoverInterrupted(root),/INVALID_JOURNAL/);
   assert.equal(await readFile(join(root,'app','sentinel.txt'),'utf8'),'original');
 }));
+
+test('reviewed Node adoption sources retain exact Git blob bytes with Windows line-ending conversion enabled', async () => {
+  const { execFileSync } = await import('node:child_process');
+  const { fileURLToPath } = await import('node:url');
+  const repository = fileURLToPath(new URL('../', import.meta.url));
+  const checkout = await mkdtemp(join(tmpdir(), 'heaven-bot-adoption-eol-'));
+  try {
+    const emptyAttributes = join(checkout, 'empty-global-attributes');
+    await writeFile(emptyAttributes, '');
+    const git = (cwd, ...args) => execFileSync('git', [
+      '-C', cwd, '-c', 'core.attributesFile=' + emptyAttributes,
+      ...args
+    ], {
+      env: { ...process.env, GIT_ATTR_NOSYSTEM: '1' },
+      timeout: 15000, windowsHide: true, maxBuffer: 2 * 1024 * 1024
+    });
+    git(checkout, '-c', 'init.templateDir=', 'init', '--quiet');
+    git(checkout, 'config', 'core.autocrlf', 'true');
+    git(checkout, 'config', 'core.eol', 'crlf');
+    git(checkout, 'config', 'core.safecrlf', 'false');
+    await mkdir(join(checkout, 'src'));
+    const mapped = ['package.json', 'src/index.mjs'];
+    const expected = new Map();
+    for (const path of mapped) {
+      const bytes = git(repository, 'cat-file', 'blob', 'HEAD:' + path);
+      assert.ok(bytes.includes(10) && !bytes.includes(13), path + ' must have canonical LF Git bytes');
+      expected.set(path, bytes);
+      await writeFile(join(checkout, path), bytes);
+    }
+    // Use the actual child policy, not test-only attributes that would mask a
+    // checkout discrepancy. Recreate the files from Git's staged blobs.
+    try {
+      await writeFile(join(checkout, '.gitattributes'), await readFile(join(repository, '.gitattributes')));
+    } catch (error) {
+      if (error.code !== 'ENOENT') throw error;
+    }
+    git(checkout, 'add', '--all');
+    for (const path of mapped) await rm(join(checkout, path));
+    git(checkout, 'checkout-index', '--force', '--all');
+    for (const path of mapped) {
+      const actual = await readFile(join(checkout, path));
+      assert.ok(actual.equals(expected.get(path)), path + ' checkout bytes differ from reviewed Git blob');
+    }
+  } finally {
+    await rm(checkout, { recursive: true, force: true });
+  }
+});
