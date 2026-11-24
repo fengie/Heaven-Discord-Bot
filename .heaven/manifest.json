@@ -1,0 +1,178 @@
+{
+  "apiVersion": "heaven.generated/v1",
+  "generatorVersion": "0.4.0",
+  "layoutVersion": 3,
+  "app": "heaven-discord-bot",
+  "specHash": "d0a48f6aae388a3c12453b46243fa1464ab31c29f7486aec3e299bcb88d7a1a7",
+  "targets": [
+    "server"
+  ],
+  "capabilities": [
+    {
+      "id": "core.logging",
+      "version": "1",
+      "requires": []
+    },
+    {
+      "id": "release.autoupdate",
+      "version": "1",
+      "requires": [
+        "core.logging"
+      ]
+    },
+    {
+      "id": "network.http",
+      "version": "1",
+      "requires": [
+        "core.logging"
+      ]
+    },
+    {
+      "id": "runtime.background-jobs",
+      "version": "1",
+      "requires": [
+        "core.logging"
+      ]
+    }
+  ],
+  "adapters": [
+    {
+      "target": "server",
+      "id": "server.existing-node-esm",
+      "framework": "node"
+    }
+  ],
+  "qualityChecks": [
+    {
+      "id": "adapter-contracts",
+      "required": true,
+      "source": "platform",
+      "description": "Every target adapter manifest matches the selected adapter and target."
+    },
+    {
+      "id": "adapter:server:existing-node-product-tests",
+      "required": true,
+      "source": "adapter:server.existing-node-esm",
+      "description": "Run existing-node-product-tests for target server."
+    },
+    {
+      "id": "adapter:server:existing-node-runtime-acceptance",
+      "required": true,
+      "source": "adapter:server.existing-node-esm",
+      "description": "Run existing-node-runtime-acceptance for target server."
+    },
+    {
+      "id": "adapter:server:existing-node-source-binding",
+      "required": true,
+      "source": "adapter:server.existing-node-esm",
+      "description": "Run existing-node-source-binding for target server."
+    },
+    {
+      "id": "app-spec-valid",
+      "required": true,
+      "source": "platform",
+      "description": "App Spec remains valid and normalized."
+    },
+    {
+      "id": "automatic-update-contract",
+      "required": true,
+      "source": "platform",
+      "description": "Automatic update or platform-native automatic delivery remains mandatory and fail-closed."
+    },
+    {
+      "id": "capability-plan-resolves",
+      "required": true,
+      "source": "platform",
+      "description": "Requested reusable capabilities resolve for every target."
+    },
+    {
+      "id": "no-unresolved-template-tokens",
+      "required": true,
+      "source": "platform",
+      "description": "Generated contract files contain no unresolved reserved Heaven template tokens."
+    },
+    {
+      "id": "performance-budget",
+      "required": true,
+      "source": "app-spec",
+      "description": "Enforce target-appropriate performance budgets."
+    },
+    {
+      "id": "scaffold-integrity",
+      "required": true,
+      "source": "platform",
+      "description": "All generated contract files remain present and non-symlink regular files."
+    },
+    {
+      "id": "security-baseline",
+      "required": true,
+      "source": "app-spec",
+      "description": "Run the generated application security baseline."
+    },
+    {
+      "id": "update:server:atomic-deployment",
+      "required": true,
+      "source": "platform:update-policy",
+      "description": "Verify automatic update delivery strategy atomic-deployment for target server."
+    }
+  ],
+  "updatePolicy": {
+    "apiVersion": "heaven.update/v1",
+    "policyVersion": "1",
+    "mode": "required",
+    "capability": "release.autoupdate",
+    "enabledByDefault": true,
+    "exceptionPolicy": {
+      "implicitExemptionsAllowed": false,
+      "requiresExplicitReviewedException": true
+    },
+    "integrity": {
+      "signedMetadata": true,
+      "artifactDigest": true,
+      "publisherIdentity": true
+    },
+    "transaction": {
+      "stageBeforeReplace": true,
+      "verifyBeforeInstall": true,
+      "atomicHandoff": true,
+      "rollbackRequired": true,
+      "interruptedUpdateRecovery": true,
+      "installedIdentityVerification": true
+    },
+    "hygiene": {
+      "updaterOwnedStagingOnly": true,
+      "cleanupAfterSuccess": true,
+      "cleanupAfterFailure": true,
+      "cleanupOnStartup": true,
+      "maxStagingAgeHours": 24
+    },
+    "runtime": {
+      "backgroundNoConsole": true,
+      "noFocusSteal": true,
+      "visibleStatus": true
+    },
+    "targets": [
+      {
+        "target": "server",
+        "delivery": "atomic-deployment",
+        "checkOnStartup": false,
+        "backgroundChecks": false,
+        "manualCheck": false,
+        "settingsToggle": false
+      }
+    ]
+  },
+  "files": [
+    ".heaven/agent-entry.json",
+    ".heaven/app-update-policy.json",
+    ".heaven/manifest.json",
+    ".heaven/quality-plan.json",
+    "AGENTS.md",
+    "README.md",
+    "app-spec.json",
+    "package.json",
+    "src/index.mjs",
+    "src/shared/README.md",
+    "targets/server/heaven.adapter.json"
+  ]
+}

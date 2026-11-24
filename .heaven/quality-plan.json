@@ -1,0 +1,79 @@
+{
+  "apiVersion": "heaven.quality/v1",
+  "app": "heaven-discord-bot",
+  "specHash": "d0a48f6aae388a3c12453b46243fa1464ab31c29f7486aec3e299bcb88d7a1a7",
+  "checks": [
+    {
+      "id": "adapter-contracts",
+      "required": true,
+      "source": "platform",
+      "description": "Every target adapter manifest matches the selected adapter and target."
+    },
+    {
+      "id": "adapter:server:existing-node-product-tests",
+      "required": true,
+      "source": "adapter:server.existing-node-esm",
+      "description": "Run existing-node-product-tests for target server."
+    },
+    {
+      "id": "adapter:server:existing-node-runtime-acceptance",
+      "required": true,
+      "source": "adapter:server.existing-node-esm",
+      "description": "Run existing-node-runtime-acceptance for target server."
+    },
+    {
+      "id": "adapter:server:existing-node-source-binding",
+      "required": true,
+      "source": "adapter:server.existing-node-esm",
+      "description": "Run existing-node-source-binding for target server."
+    },
+    {
+      "id": "app-spec-valid",
+      "required": true,
+      "source": "platform",
+      "description": "App Spec remains valid and normalized."
+    },
+    {
+      "id": "automatic-update-contract",
+      "required": true,
+      "source": "platform",
+      "description": "Automatic update or platform-native automatic delivery remains mandatory and fail-closed."
+    },
+    {
+      "id": "capability-plan-resolves",
+      "required": true,
+      "source": "platform",
+      "description": "Requested reusable capabilities resolve for every target."
+    },
+    {
+      "id": "no-unresolved-template-tokens",
+      "required": true,
+      "source": "platform",
+      "description": "Generated contract files contain no unresolved reserved Heaven template tokens."
+    },
+    {
+      "id": "performance-budget",
+      "required": true,
+      "source": "app-spec",
+      "description": "Enforce target-appropriate performance budgets."
+    },
+    {
+      "id": "scaffold-integrity",
+      "required": true,
+      "source": "platform",
+      "description": "All generated contract files remain present and non-symlink regular files."
+    },
+    {
+      "id": "security-baseline",
+      "required": true,
+      "source": "app-spec",
+      "description": "Run the generated application security baseline."
+    },
+    {
+      "id": "update:server:atomic-deployment",
+      "required": true,
+      "source": "platform:update-policy",
+      "description": "Verify automatic update delivery strategy atomic-deployment for target server."
+    }
+  ]
+}
