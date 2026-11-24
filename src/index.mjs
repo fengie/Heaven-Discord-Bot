@@ -12,29 +12,32 @@ client.once(Events.ClientReady, ready => {
 
 client.on(Events.InteractionCreate, async interaction => {
   if (!interaction.isChatInputCommand()) return;
+  // This handler owns one initial private response and never defers. If
+  // another handler already acknowledged the event, do not send a duplicate.
+  if (interaction.replied || interaction.deferred) return;
 
+  let content;
   try {
-    const content = replyForCommand(interaction.commandName, {
+    content = replyForCommand(interaction.commandName, {
       uptimeSeconds: process.uptime(),
       gatewayPingMs: client.ws.ping,
-    });
-    await interaction.reply({
-      content: content ?? 'Unknown command. Use /help.',
-      flags: MessageFlags.Ephemeral,
-    });
+    }) ?? 'Unknown command. Use /help.';
   } catch {
-    // Do not log the interaction object, REST headers, or credentials.
-    console.error(JSON.stringify({ event: 'discord.command_failed', command: interaction.commandName }));
-    try {
-      const response = { content: 'Command failed. Try again later.', flags: MessageFlags.Ephemeral };
-      if (interaction.replied || interaction.deferred) {
-        await interaction.followUp(response);
-      } else {
-        await interaction.reply(response);
-      }
-    } catch {
-      console.error('discord.error_response_failed');
-    }
+    // No response has been attempted: one private fallback remains safe.
+    console.error(JSON.stringify({ event: 'discord.command_failed', stage: 'compute' }));
+    content = 'Command failed. Try again later.';
+  }
+
+  try {
+    await interaction.reply({ content, flags: MessageFlags.Ephemeral });
+  } catch (error) {
+    // An initial callback may have reached Discord even if the SDK throws.
+    // The SDK owns transport retries; never issue another application reply
+    // or follow-up merely because its acknowledgement was not observed.
+    const outcome = error?.code === 10062 ? 'unknown_interaction'
+      : error?.code === 40060 ? 'already_acknowledged'
+      : 'response_unconfirmed';
+    console.error(JSON.stringify({ event: 'discord.command_failed', stage: 'response', outcome }));
   }
 });
 
