@@ -32,3 +32,28 @@ After a verified reusable parent improvement, assess its impact across the compl
 ## Child-specific instructions and inheritance
 
 Keep product-specific instructions here. Do not copy private Toolbox policy text, credentials, host settings, or host rights into this child. For a proposed shared component update, use the existing read-only inheritance and public-child-transfer planning tools with explicit mappings and revisions. Preserve customized child bytes; a conflict requires owner review. These plans do not copy, publish, or authorize an update.
+
+## Research at task start — live shared knowledge
+
+The [subscription](.heaven/toolbox-subscriptions.json) identifies reviewed inherited capability lineage. It is not a freshness pin for general policies, engineering lessons, research or reusable practices. Before each task, verify the live canonical `fengie/heaven-toolbox@main` SHA using the existing authorized GitHub/Toolbox route, read the current shared entry/training and task-relevant knowledge, and preserve the separate capability pin. Follow the [shared knowledge lifecycle and portfolio lookup](https://github.com/fengie/heaven-toolbox/blob/main/tools/knowledge-lifecycle/README.md).
+
+For an authorized clean checkout in `TOOLBOX_ROOT`, set `TOOLBOX_SOURCE_SHA` from the independently verified live main for this task (not from a prior task or the subscription), and `TASK` to the actual task. The existing shared reader binds the result to that exact source:
+
+```powershell
+$subscription = Get-Content .heaven/toolbox-subscriptions.json -Raw | ConvertFrom-Json
+$toolbox = $env:TOOLBOX_ROOT
+$expected = [string]$env:TOOLBOX_SOURCE_SHA
+if (-not $toolbox -or -not $env:TASK -or $expected -cnotmatch '^[a-f0-9]{40}$') {
+    throw 'Set TOOLBOX_ROOT, TASK and the freshly verified canonical TOOLBOX_SOURCE_SHA.'
+}
+$revision = git -C $toolbox rev-parse HEAD
+if ($LASTEXITCODE -ne 0 -or $revision -cne $expected) {
+    throw 'Reconcile the authorized Toolbox checkout to verified current main before shared lookup.'
+}
+node (Join-Path $toolbox 'tools/agent-control/research-preflight.mjs') --root $toolbox --source-sha $revision --scope $subscription.repository --task $env:TASK
+if ($LASTEXITCODE -ne 0) { throw 'Shared lookup failed; do not use unverified research results.' }
+```
+
+Connector-only callers use the same authorized exact-source evidence; do not claim this command executed when it did not. If access is unavailable, record the specific knowledge gap and continue authorized child-owned work without inventing latest research or bypassing managed admission. Compare relevant source/tests and actual applicability before reuse. Keep private lookup data and raw evidence in the authorized workspace, not public commits or logs. The reader does not grant source transfer, credentials, host access or mutation authority.
+
+At meaningful task/incident closeout, return compact source-linked good practices, failures, rejected alternatives, unverified findings and local-only dispositions via the existing [Child Feedback contract](https://github.com/fengie/heaven-toolbox/blob/main/tools/app-platform/CHILD_FEEDBACK.md) and original issue. Keep the actual child commit and the actual inherited subscription pin in the packet; record the live parent consulted separately. Only verified, reviewed transferable practices can become shared policy or capability implementations. Never advance the subscription merely to retrieve knowledge. Preserve child-specific data, source, acceptance and safe update/release boundaries.
