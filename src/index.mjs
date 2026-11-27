@@ -5,13 +5,16 @@ import { replyForCommand } from './commands.mjs';
 
 // Slash commands need only Guilds: no privileged message-content or member intent.
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+let stopping = false;
+let destroyTail = Promise.resolve();
 
 client.once(Events.ClientReady, ready => {
+  if (stopping) return;
   console.info(JSON.stringify({ event: 'discord.ready', userId: ready.user.id, sourceSha: process.env.HEAVEN_BOT_SOURCE_SHA ?? null, pid: process.pid, observedAt: new Date().toISOString() }));
 });
 
 client.on(Events.InteractionCreate, async interaction => {
-  if (!interaction.isChatInputCommand()) return;
+  if (stopping || !interaction.isChatInputCommand()) return;
   // This handler owns one initial private response and never defers. If
   // another handler already acknowledged the event, do not send a duplicate.
   if (interaction.replied || interaction.deferred) return;
@@ -45,18 +48,42 @@ client.on(Events.Error, () => {
   console.error('discord.client_error');
 });
 
-function shutdown() {
-  console.info('discord.shutdown');
-  void Promise.resolve(client.destroy()).catch(() => {
-    process.exitCode = 1;
+// Serialize owned cleanup. A login already in progress can settle after the
+// first destroy; its settlement must trigger another cleanup, not readiness.
+function destroyClient() {
+  destroyTail = destroyTail.then(async () => {
+    try {
+      await client.destroy();
+    } catch {
+      console.error('discord.shutdown_failed');
+      process.exitCode = 1;
+    }
   });
+  return destroyTail;
+}
+
+function shutdown() {
+  if (stopping) return;
+  stopping = true;
+  console.info('discord.shutdown');
+  void destroyClient();
 }
 process.once('SIGINT', shutdown);
 process.once('SIGTERM', shutdown);
 
 async function start() {
-  const admission = await inspectReleaseInheritance();
-  if (!admission.ready) {
+  let admission;
+  try {
+    admission = await inspectReleaseInheritance();
+  } catch {
+    if (!stopping) {
+      console.error('TOOLBOX_INHERITANCE_NOT_VERIFIED');
+      process.exitCode = 1;
+    }
+    return;
+  }
+  if (stopping) return;
+  if (!admission?.ready) {
     console.error('TOOLBOX_INHERITANCE_NOT_VERIFIED');
     process.exitCode = 1;
     return;
@@ -73,10 +100,14 @@ async function start() {
   try {
     await client.login(token);
   } catch {
-    console.error('discord.login_failed (verify token and network access)');
-    process.exitCode = 1;
-    await client.destroy();
+    if (!stopping) {
+      console.error('discord.login_failed (verify token and network access)');
+      process.exitCode = 1;
+    }
+    await destroyClient();
+    return;
   }
+  if (stopping) await destroyClient();
 }
 
 void start();
